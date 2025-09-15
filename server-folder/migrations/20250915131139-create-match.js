@@ -16,6 +16,14 @@ module.exports = {
           model: 'Leagues',
           key: 'id',
         },
+      },
+      league_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'Leagues',
+          key: 'id',
+        },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
@@ -48,11 +56,11 @@ module.exports = {
         allowNull: true,
       },
       home_score: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.STRING,
         allowNull: true,
       },
       away_score: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.STRING,
         allowNull: true,
       },
       status: {
