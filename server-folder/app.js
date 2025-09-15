@@ -2,7 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { errorHandling } = require('./middlewares/errorHandling');
-const LeagueController = require('./controllers/leagueController');
+const LoggingMiddleware = require('./middlewares/logging/loggingMiddleware');
+const apiRoutes = require('./routes');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -19,13 +20,8 @@ app.use(
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json({ limit: '10mb' }));
 
-// Request logging middleware (development only)
-if (process.env.NODE_ENV === 'development') {
-  app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-    next();
-  });
-}
+// Custom middlewares
+app.use(LoggingMiddleware.logRequests);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -43,36 +39,40 @@ app.get('/', (req, res) => {
     success: true,
     message: 'Football League API',
     version: '1.0.0',
-    endpoints: {
-      leagues: 'GET /leagues, POST /leagues',
-      teams: 'GET /teams, GET /teams/:id',
-      players: 'GET /players, GET /players/:teamId',
-      matches: 'GET /matches/:id, POST /matches/:id',
-      sync: 'POST /sync-team-player/:id',
+    documentation: {
+      baseUrl: '/api/v1',
+      endpoints: {
+        leagues: '/api/v1/leagues',
+        teams: '/api/v1/teams',
+        players: '/api/v1/players',
+        matches: '/api/v1/matches',
+      },
     },
   });
 });
 
 // API Routes
-app.get('/leagues', LeagueController.getLeagues);
-app.post('/leagues', LeagueController.syncLeagues);
-
-app.get('/teams', LeagueController.getTeams);
-app.get('/teams/:id', LeagueController.getTeamsById);
-
-app.get('/players', LeagueController.getPlayers);
-app.get('/players/:teamId', LeagueController.getPlayersById);
-
-// Fixed: Changed matches route to use correct controller method
-app.post('/matches/:id', LeagueController.syncMatches);
-
-app.post('/sync-team-player/:id', LeagueController.syncTeamPlayer);
+app.use('/api/v1', apiRoutes);
 
 // 404 handler for unmatched routes
-app.use('*', (req, res) => {
+app.use((req, res) => {
   res.status(404).json({
     success: false,
     message: `Route ${req.method} ${req.originalUrl} not found`,
+    availableRoutes: [
+      'GET /',
+      'GET /health',
+      'GET /api/v1/leagues',
+      'POST /api/v1/leagues/sync',
+      'GET /api/v1/teams',
+      'GET /api/v1/teams/:leagueId',
+      'POST /api/v1/teams/sync/:leagueId',
+      'GET /api/v1/players',
+      'GET /api/v1/players/:teamId',
+      'POST /api/v1/players/sync/:teamId',
+      'GET /api/v1/matches/:leagueId',
+      'POST /api/v1/matches/sync/:leagueId',
+    ],
   });
 });
 
@@ -84,6 +84,12 @@ const server = app.listen(port, () => {
   console.log(`🚀 Football League API server running on port ${port}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Health check: http://localhost:${port}/health`);
+  console.log(`📡 API base URL: http://localhost:${port}/api/v1`);
+  console.log(`📚 Available endpoints:`);
+  console.log(`   - Leagues: GET/POST /api/v1/leagues`);
+  console.log(`   - Teams: GET/POST /api/v1/teams`);
+  console.log(`   - Players: GET/POST /api/v1/players`);
+  console.log(`   - Matches: GET/POST /api/v1/matches`);
 });
 
 // Handle graceful shutdown
