@@ -112,9 +112,7 @@ class MatchService {
           return errorResult;
         }
       });
-
       await Promise.all(syncPromises);
-
       return results;
     } catch (error) {
       console.error('Error in batch synchronize matches:', error);
