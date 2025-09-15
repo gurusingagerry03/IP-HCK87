@@ -21,7 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json({ limit: '10mb' }));
 
 // Custom middlewares
-app.use(LoggingMiddleware.logRequests);
+app.use(LoggingMiddleware.logRequests());
 
 // Health check endpoint
 app.get('/health', (req, res) => {
