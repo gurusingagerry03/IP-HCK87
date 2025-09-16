@@ -7,7 +7,7 @@ const ai = new GoogleGenAI({});
 
 async function descriptionGeneration(teamData) {
   const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-lite',
+    model: 'gemini-2.5-flash',
     contents: ` Generate a professional club information description for this football team. 
       Keep it exactly 2-3 sentences, around 50-70 words maximum.
       Include: team name, location, founding year, and brief history/characteristics.
@@ -256,6 +256,20 @@ class teamController {
         console.error('Bulk operation error:', bulkError);
         syncResults.errors.push(`Bulk operation failed: ${bulkError.message}`);
       }
+
+      const teamsNeedingDesc = await Team.findAll({
+        where: {
+          description: null,
+        },
+      });
+
+      for (const t of teamsNeedingDesc) {
+        const desc = await descriptionGeneration(t);
+        console.log(desc, '<<< description');
+
+        await Team.update({ description: desc }, { where: { id: t.id, description: null } });
+      }
+
       return res.status(200).json({
         success: true,
         data: syncResults,
@@ -263,6 +277,7 @@ class teamController {
       });
     } catch (error) {
       console.log(error);
+      m;
       next(error);
     }
   }

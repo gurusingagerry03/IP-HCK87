@@ -9,7 +9,6 @@ export default function MatchSummary() {
   const [match, setMatch] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [generatingSummary, setGeneratingSummary] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -23,14 +22,38 @@ export default function MatchSummary() {
       setError(null);
 
       try {
-        const response = await http.get(`/matches/${matchId}`);
-        if (response.data.success) {
-          setMatch(response.data.data);
-        }
+        // Simulate a successful match fetch for now
+        // const response = await http.get(`/matches/${matchId}`);
+        // if (response.data.success) {
+        //   setMatch(response.data.data);
+        // }
+
+        // Mock match data for demonstration
+        setTimeout(() => {
+          setMatch({
+            id: matchId,
+            match_date: '2024-12-15',
+            match_time: '20:00',
+            venue: 'Wembley Stadium',
+            status: 'finished',
+            home_score: 2,
+            away_score: 1,
+            HomeTeam: {
+              id: 1,
+              name: 'Arsenal FC',
+              logoUrl: 'https://logos-world.net/wp-content/uploads/2020/06/Arsenal-Logo.png'
+            },
+            AwayTeam: {
+              id: 2,
+              name: 'Chelsea FC',
+              logoUrl: 'https://logos-world.net/wp-content/uploads/2020/06/Chelsea-Logo.png'
+            }
+          });
+          setLoading(false);
+        }, 1000);
       } catch (err) {
         console.error('Error fetching match data:', err);
         setError('Failed to load match data');
-      } finally {
         setLoading(false);
       }
     };
@@ -72,20 +95,6 @@ export default function MatchSummary() {
       shotsOnTarget: { home: 6, away: 3 },
       corners: { home: 7, away: 4 },
       fouls: { home: 12, away: 15 }
-    },
-    playerRatings: {
-      home: [
-        { name: "John Smith", position: "GK", rating: 8.5 },
-        { name: "Mike Johnson", position: "DF", rating: 7.2 },
-        { name: "David Wilson", position: "MF", rating: 8.8 },
-        { name: "Alex Brown", position: "FW", rating: 9.1 }
-      ],
-      away: [
-        { name: "Robert Davis", position: "GK", rating: 7.8 },
-        { name: "Chris Miller", position: "DF", rating: 7.5 },
-        { name: "James Taylor", position: "MF", rating: 8.2 },
-        { name: "Tom Anderson", position: "FW", rating: 8.7 }
-      ]
     },
     analysis: "The home team dominated possession and created more clear-cut chances. The tactical switch to a more aggressive formation in the second half proved decisive. The away team showed great resilience and counter-attacking threat despite being under pressure for long periods."
   };
@@ -247,34 +256,20 @@ export default function MatchSummary() {
       <div className="px-4 sm:px-6 lg:px-8 pb-16">
         <div className="max-w-4xl mx-auto space-y-8">
 
-          {/* Generate Summary Button */}
+          {/* AI Generated Badge */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
             className="text-center"
           >
-            <button
-              onClick={() => {
-                setGeneratingSummary(true);
-                // Simulate API call
-                setTimeout(() => setGeneratingSummary(false), 2000);
-              }}
-              disabled={generatingSummary}
-              className="px-8 py-4 bg-gradient-to-r from-green-600 to-green-500 text-white font-semibold rounded-2xl hover:from-green-500 hover:to-green-400 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {generatingSummary ? (
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>Generating AI Summary...</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <span>🤖</span>
-                  <span>Generate AI Summary</span>
-                </div>
-              )}
-            </button>
+            <div className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-green-600/20 to-green-500/20 border border-green-500/30 rounded-2xl">
+              <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+              <div className="flex items-center gap-2">
+                <span>🤖</span>
+                <span className="text-green-400 font-medium">AI Generated Summary</span>
+              </div>
+            </div>
           </motion.div>
 
           {/* Match Overview */}
@@ -387,58 +382,12 @@ export default function MatchSummary() {
             </div>
           </motion.div>
 
-          {/* Player Ratings */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 1.2 }}
-            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8"
-          >
-            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-              <span>⭐</span>
-              Player Ratings
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                <h3 className="text-white font-semibold mb-4">{match?.HomeTeam?.name || 'Home'}</h3>
-                <div className="space-y-3">
-                  {staticSummary.playerRatings.home.map((player, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                      <div>
-                        <div className="text-white font-medium">{player.name}</div>
-                        <div className="text-white/60 text-sm">{player.position}</div>
-                      </div>
-                      <div className="text-accent font-bold text-lg">
-                        {player.rating}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <h3 className="text-white font-semibold mb-4">{match?.AwayTeam?.name || 'Away'}</h3>
-                <div className="space-y-3">
-                  {staticSummary.playerRatings.away.map((player, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                      <div>
-                        <div className="text-white font-medium">{player.name}</div>
-                        <div className="text-white/60 text-sm">{player.position}</div>
-                      </div>
-                      <div className="text-accent font-bold text-lg">
-                        {player.rating}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </motion.div>
 
           {/* Match Analysis */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 1.4 }}
+            transition={{ duration: 0.6, delay: 1.2 }}
             className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8"
           >
             <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">

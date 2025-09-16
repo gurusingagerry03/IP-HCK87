@@ -95,15 +95,7 @@ export default function ClubDetail() {
       },
       founded: club.foundedYear,
       coach: club.coach,
-      history:
-        club.description ||
-        `${club.name} is a professional football club based in ${club.stadiumCity}, ${
-          club.country
-        }. Founded in ${
-          club.foundedYear
-        }, the club has a rich history and continues to compete at the highest level of football. The team plays their home matches at ${
-          club.stadiumName
-        }, which has a capacity of ${club.stadiumCapacity?.toLocaleString()} spectators.`,
+      history: club.description,
       stadiumDetails: `${club.stadiumName} is located at ${
         club.venueAddress || club.stadiumCity + ', ' + club.country
       }. With a capacity of ${club.stadiumCapacity?.toLocaleString()} spectators, it serves as the home ground for ${
