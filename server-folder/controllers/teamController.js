@@ -1,6 +1,31 @@
 const { Team, League, Player } = require('../models');
 const { http } = require('../helpers/http');
 const { Op } = require('sequelize');
+const { BadRequestError, NotFoundError } = require('../helpers/customErrors');
+const { GoogleGenAI } = require('@google/genai');
+const ai = new GoogleGenAI({});
+
+async function descriptionGeneration(teamData) {
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash-lite',
+    contents: ` Generate a professional club information description for this football team. 
+      Keep it exactly 2-3 sentences, around 50-70 words maximum.
+      Include: team name, location, founding year, and brief history/characteristics.
+      DO NOT mention stadium name or capacity.
+      Make it sound professional and informative like a club profile.
+      
+      Team Details:
+      - Name: ${teamData.name}
+      - Country: ${teamData.country}  
+      - Founded: ${teamData.foundedYear}
+
+      - Coach: ${teamData.coach || 'N/A'}
+      
+      Example format: "[Team] is a professional football club based in [City], [Country]. Founded in [Year], the club has a rich history and continues to compete at the highest level of football."`,
+  });
+
+  return response.text;
+}
 
 class teamController {
   static async getAllTeams(req, res, next) {
@@ -70,7 +95,7 @@ class teamController {
       const { id } = req.params;
 
       if (!id || isNaN(id) || parseInt(id) <= 0) {
-        throw { name: 'BadRequest', message: 'Team ID must be a positive number' };
+        throw new BadRequestError('Team ID must be a positive number');
       }
 
       const team = await Team.findByPk(parseInt(id), {
@@ -85,13 +110,12 @@ class teamController {
       });
 
       if (!team) {
-        throw { name: 'NotFound', message: `Team with ID ${id} not found` };
+        throw new NotFoundError(`Team with ID ${id} not found`);
       }
 
       res.status(200).json(team);
     } catch (error) {
       console.log(error);
-
       next(error);
     }
   }
@@ -101,18 +125,12 @@ class teamController {
       const { leagueId } = req.params;
 
       if (!leagueId) {
-        return res.status(400).json({
-          success: false,
-          message: 'League ID is required',
-        });
+        throw new BadRequestError('League ID is required');
       }
 
       const league = await League.findByPk(leagueId);
       if (!league) {
-        return res.status(404).json({
-          success: false,
-          message: 'League not found',
-        });
+        throw new NotFoundError('League not found');
       }
 
       let teamsResponse;
@@ -124,17 +142,11 @@ class teamController {
           },
         });
       } catch (apiError) {
-        return res.status(400).json({
-          success: false,
-          message: 'Failed to connect to external team API',
-        });
+        throw new BadRequestError('Failed to connect to external team API');
       }
 
       if (!teamsResponse.data || !Array.isArray(teamsResponse.data)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid response from external API',
-        });
+        throw new BadRequestError('Invalid response from external API');
       }
 
       const syncResults = {
@@ -244,13 +256,13 @@ class teamController {
         console.error('Bulk operation error:', bulkError);
         syncResults.errors.push(`Bulk operation failed: ${bulkError.message}`);
       }
-
       return res.status(200).json({
         success: true,
         data: syncResults,
         message: 'Teams and players synchronization completed',
       });
     } catch (error) {
+      console.log(error);
       next(error);
     }
   }

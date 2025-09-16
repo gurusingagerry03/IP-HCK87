@@ -57,7 +57,7 @@ export function AuthProvider({ children }) {
       console.error('Login error:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Login failed'
+        message: error.response?.data?.message || 'Login failed',
       };
     }
   };
@@ -67,7 +67,7 @@ export function AuthProvider({ children }) {
       const response = await http.post('/users/register', {
         fullname,
         email,
-        password
+        password,
       });
 
       if (response.data.success) {
@@ -89,7 +89,7 @@ export function AuthProvider({ children }) {
       console.error('Register error:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Registration failed'
+        message: error.response?.data?.message || 'Registration failed',
       };
     }
   };

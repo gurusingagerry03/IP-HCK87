@@ -5,6 +5,7 @@ const teamRoutes = require('./teamRoutes');
 const matchRoutes = require('./matchRoutes');
 const playerRoutes = require('./playerRoutes');
 const userRoutes = require('./userRoutes');
+const matchController = require('../controllers/matchController');
 
 router.use('/users', userRoutes);
 router.use('/leagues', leagueRoutes);

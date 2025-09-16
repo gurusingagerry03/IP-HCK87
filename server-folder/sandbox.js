@@ -41,7 +41,7 @@ async function main() {
       - Name: ${teamData.name}
       - Country: ${teamData.country}  
       - Founded: ${teamData.foundedYear}
-      - City: ${teamData.stadiumCity}
+
       - Coach: ${teamData.coach || 'N/A'}
       
       Example format: "[Team] is a professional football club based in [City], [Country]. Founded in [Year], the club has a rich history and continues to compete at the highest level of football."`,

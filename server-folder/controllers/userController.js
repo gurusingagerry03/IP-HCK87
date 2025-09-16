@@ -1,6 +1,7 @@
 const { User } = require('../models');
 const { comparePasswords, hashPassword } = require('../helpers/bcrypt');
 const { generateToken } = require('../helpers/jwt');
+const { BadRequestError, UnauthorizedError } = require('../helpers/customErrors');
 
 class userController {
   static async register(req, res, next) {
@@ -32,33 +33,21 @@ class userController {
       const { email, password } = req.body;
 
       if (!email) {
-        return res.status(400).json({
-          success: false,
-          message: 'Email required',
-        });
+        throw new BadRequestError('Email required');
       }
 
       if (!password) {
-        return res.status(400).json({
-          success: false,
-          message: 'Password required',
-        });
+        throw new BadRequestError('Password required');
       }
 
       const user = await User.findOne({ where: { email } });
       if (!user) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid credentials',
-        });
+        throw new UnauthorizedError('Invalid email or password');
       }
 
       const isPasswordValid = await comparePasswords(password, user.password);
       if (!isPasswordValid) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid credentials',
-        });
+        throw new UnauthorizedError('Invalid email or password');
       }
 
       const access_token = generateToken({
@@ -69,6 +58,25 @@ class userController {
       return res.status(200).json({
         success: true,
         data: { access_token },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  //get user by id
+  static async getUserById(req, res, next) {
+    try {
+      const { id } = req.params;
+      const user = await User.findByPk(id); // Fetch user by primary key (id)
+
+      if (!user) {
+        throw new NotFoundError(`User with ID ${id} not found`);
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: user,
       });
     } catch (error) {
       next(error);

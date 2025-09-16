@@ -1,4 +1,5 @@
 const { Player, Team, League } = require('../models');
+const { BadRequestError, NotFoundError } = require('../helpers/customErrors');
 
 class playerController {
   static async getPlayersByTeamId(req, res, next) {
@@ -7,10 +8,7 @@ class playerController {
       const teamId = parseInt(id);
 
       if (!teamId || isNaN(teamId)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid Team ID',
-        });
+        throw new BadRequestError('Invalid Team ID');
       }
 
       const team = await Team.findByPk(teamId, {
@@ -22,10 +20,7 @@ class playerController {
       });
 
       if (!team) {
-        return res.status(404).json({
-          success: false,
-          message: 'Team not found',
-        });
+        throw new NotFoundError('Team not found');
       }
 
       const players = await Player.findAll({
@@ -49,7 +44,6 @@ class playerController {
       });
     } catch (error) {
       console.log(error);
-
       next(error);
     }
   }

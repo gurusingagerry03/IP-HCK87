@@ -1,5 +1,6 @@
 const { League, Team } = require('../models');
 const { http } = require('../helpers/http');
+const { BadRequestError, NotFoundError, ConflictError } = require('../helpers/customErrors');
 
 class leagueController {
   static async getAllLeagues(req, res, next) {
@@ -19,7 +20,7 @@ class leagueController {
       const { id } = req.params;
 
       if (!id || isNaN(id) || parseInt(id) <= 0) {
-        throw { name: 'BadRequest', message: 'League ID must be a positive number' };
+        throw new BadRequestError('League ID must be a positive number');
       }
 
       const leagueOptions = {
@@ -29,7 +30,7 @@ class leagueController {
       const league = await League.findOne(leagueOptions);
 
       if (!league) {
-        throw { name: 'NotFound', message: `League with ID ${id} not found` };
+        throw new NotFoundError(`League with ID ${id} not found`);
       }
 
       res.status(200).json({
@@ -46,11 +47,11 @@ class leagueController {
       const { leagueName, leagueCountry } = req.body;
 
       if (!leagueName) {
-        throw { name: 'BadRequest', message: 'League name is required' };
+        throw new BadRequestError('League name is required');
       }
 
       if (!leagueCountry) {
-        throw { name: 'BadRequest', message: 'Country is required' };
+        throw new BadRequestError('Country is required');
       }
 
       const existingLeague = await League.findOne({
@@ -61,10 +62,7 @@ class leagueController {
       });
 
       if (existingLeague) {
-        throw {
-          name: 'Conflict',
-          message: `League ${leagueName} from ${leagueCountry} already exists`,
-        };
+        throw new ConflictError(`League ${leagueName} from ${leagueCountry} already exists`);
       }
 
       let response;
@@ -75,11 +73,11 @@ class leagueController {
           },
         });
       } catch (apiError) {
-        throw { name: 'BadRequest', message: 'Failed to connect to external league API' };
+        throw new BadRequestError('Failed to connect to external league API');
       }
 
       if (!response.data || !Array.isArray(response.data)) {
-        throw { name: 'BadRequest', message: 'Invalid response from external API' };
+        throw new BadRequestError('Invalid response from external API');
       }
 
       const apiLeagueData = response.data.find(
@@ -89,10 +87,9 @@ class leagueController {
       );
 
       if (!apiLeagueData) {
-        throw {
-          name: 'NotFound',
-          message: `League "${leagueName}" from "${leagueCountry}" not found in external API`,
-        };
+        throw new NotFoundError(
+          `League "${leagueName}" from "${leagueCountry}" not found in external API`
+        );
       }
 
       const newLeague = await League.create({

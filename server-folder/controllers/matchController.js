@@ -1,6 +1,7 @@
 const { Match, Team, League } = require('../models');
 const { http } = require('../helpers/http');
 const { Op } = require('sequelize');
+const { BadRequestError, NotFoundError } = require('../helpers/customErrors');
 
 class matchController {
   static async getMatchesByLeagueId(req, res, next) {
@@ -9,18 +10,12 @@ class matchController {
       const leagueId = parseInt(id);
 
       if (!leagueId || isNaN(leagueId)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid League ID',
-        });
+        throw new BadRequestError('Invalid League ID');
       }
 
       const league = await League.findByPk(leagueId);
       if (!league) {
-        return res.status(404).json({
-          success: false,
-          message: 'League not found',
-        });
+        throw new NotFoundError('League not found');
       }
 
       // Extract query parameters
@@ -49,10 +44,7 @@ class matchController {
           const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
           whereClause.match_date = formattedDate;
         } catch (dateError) {
-          return res.status(400).json({
-            success: false,
-            message: 'Invalid date format. Expected MM/DD/YYYY',
-          });
+          throw new BadRequestError('Invalid date format. Expected MM/DD/YYYY');
         }
       }
 
@@ -163,18 +155,12 @@ class matchController {
       const { leagueId } = req.params;
 
       if (!leagueId || isNaN(leagueId)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid League ID',
-        });
+        throw new BadRequestError('Invalid League ID');
       }
 
       const league = await League.findByPk(leagueId);
       if (!league) {
-        return res.status(404).json({
-          success: false,
-          message: 'League not found',
-        });
+        throw new NotFoundError('League not found');
       }
 
       // Fetch matches from API
@@ -189,17 +175,11 @@ class matchController {
           },
         });
       } catch (apiError) {
-        return res.status(400).json({
-          success: false,
-          message: 'Failed to connect to external matches API',
-        });
+        throw new BadRequestError('Failed to connect to external matches API');
       }
 
       if (!matchesResponse.data || !Array.isArray(matchesResponse.data)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid response from external API',
-        });
+        throw new BadRequestError('Invalid response from external API');
       }
 
       // Get all teams in this league for reference
