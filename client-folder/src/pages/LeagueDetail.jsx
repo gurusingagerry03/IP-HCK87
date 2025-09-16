@@ -656,10 +656,10 @@ export default function LeagueDetail() {
           {/* CTA to clubs */}
           <motion.div variants={fade} initial="hidden" animate="show" className="mt-16 text-center">
             <button
-              onClick={() => navigate(`/clubs?league=${id}`)}
+              onClick={() => navigate(`/clubs`)}
               className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-accent/20 to-orange-500/20 border border-accent/30 text-accent hover:from-accent/30 hover:to-orange-500/30 rounded-2xl transition-all duration-300 hover:scale-105"
             >
-              <span>View all clubs in this league</span>
+              <span>View all clubs</span>
               <span>→</span>
             </button>
           </motion.div>

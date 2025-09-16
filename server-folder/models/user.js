@@ -1,5 +1,7 @@
 'use strict';
 const { Model } = require('sequelize');
+const { hashPassword } = require('../helpers/bcrypt');
+
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
     /**
@@ -16,11 +18,13 @@ module.exports = (sequelize, DataTypes) => {
       });
     }
   }
+
   User.init(
     {
       email: {
         type: DataTypes.STRING,
         allowNull: true,
+        unique: { msg: 'Email address already in use!' },
         validate: {
           isEmail: {
             msg: 'Must be a valid email address',
@@ -31,34 +35,36 @@ module.exports = (sequelize, DataTypes) => {
           },
         },
       },
-      passwordHash: {
+      password: {
         type: DataTypes.STRING,
         allowNull: true,
         validate: {
           len: {
             args: [6, 255],
-            msg: 'Password hash must be between 6 and 255 characters',
+            msg: 'Password must be between 6 and 255 characters',
           },
         },
       },
-      displayName: {
+      fullname: {
         type: DataTypes.STRING,
         allowNull: true,
         validate: {
           len: {
             args: [1, 100],
-            msg: 'Display name must be between 1 and 100 characters',
+            msg: 'Fullname must be between 1 and 100 characters',
           },
         },
       },
-      googleSub: {
+      profileImg: {
         type: DataTypes.STRING,
         allowNull: true,
-        unique: true,
         validate: {
+          isUrl: {
+            msg: 'Profile image must be a valid URL',
+          },
           len: {
             args: [1, 255],
-            msg: 'Google Sub must be between 1 and 255 characters',
+            msg: 'Profile image URL must be between 1 and 255 characters',
           },
         },
       },
@@ -66,7 +72,16 @@ module.exports = (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: 'User',
+      tableName: 'Users', // pastikan sesuai nama tabel di DB kamu
     }
   );
+
+  //hash password before saving to database with helpers/bcrypt.js
+  User.beforeCreate(async (user, options) => {
+    if (user.password) {
+      user.password = await hashPassword(user.password);
+    }
+  });
+
   return User;
 };

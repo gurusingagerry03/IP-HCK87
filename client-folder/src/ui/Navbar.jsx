@@ -3,9 +3,9 @@ import { NavLink, useLocation } from 'react-router';
 
 const links = [
   { to: '/', label: 'Home' },
+  { to: '/leagues', label: 'Leagues' },
   { to: '/clubs', label: 'Clubs' },
   { to: '/favorites', label: 'Favorites', icon: '♡' },
-  { to: '/chat', label: 'Chat AI', icon: '💬' },
 ];
 
 const base =

@@ -3,7 +3,7 @@ const leagueRoutes = require('./leagueRoutes');
 const teamRoutes = require('./teamRoutes');
 const playerRoutes = require('./playerRoutes');
 const matchRoutes = require('./matchRoutes');
-
+const userRoutes = require('./userRoutes');
 const router = express.Router();
 
 /**
@@ -26,5 +26,6 @@ router.use('/leagues', leagueRoutes);
 router.use('/teams', teamRoutes);
 router.use('/players', playerRoutes);
 router.use('/matches', matchRoutes);
-
+// register
+router.use('/users', userRoutes);
 module.exports = router;

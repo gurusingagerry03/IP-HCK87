@@ -1,141 +1,300 @@
-const LeagueService = require('../services/leagueService');
-const { Team } = require('../models');
+const { League, Team } = require('../models');
 const { http } = require('../helpers/http');
+const { NotFoundError, BadRequestError, ConflictError } = require('../helpers/customErrors');
 
 /**
  * League Controller - Handles league-related HTTP requests
  */
 class LeagueController {
   /**
-   * Get all leagues with associated teams
+   * Get all leagues with enhanced information and filtering
    * @route GET /api/leagues
    */
   static async getAllLeagues(req, res, next) {
     try {
-      const leagues = await LeagueService.getAllLeagues([
-        {
-          model: Team,
-        },
-      ]);
+      const { country, search, includeTeams = 'true' } = req.query;
+
+      let whereCondition = {};
+
+      // Add country filter
+      if (country?.trim()) {
+        whereCondition.country = {
+          [require('sequelize').Op.iLike]: `%${country.trim()}%`,
+        };
+      }
+
+      // Add search functionality
+      if (search?.trim()) {
+        whereCondition = {
+          ...whereCondition,
+          [require('sequelize').Op.or]: [
+            { name: { [require('sequelize').Op.iLike]: `%${search.trim()}%` } },
+            { country: { [require('sequelize').Op.iLike]: `%${search.trim()}%` } },
+          ],
+        };
+      }
+
+      const options = {
+        where: whereCondition,
+        order: [['createdAt', 'DESC']],
+        ...(includeTeams === 'true' && {
+          include: [
+            {
+              model: Team,
+              attributes: ['id', 'name', 'logoUrl', 'country'],
+            },
+          ],
+        }),
+      };
+
+      const leagues = await League.findAll(options);
+
+      // Calculate statistics
+      const stats = {
+        totalLeagues: leagues.length,
+        ...(includeTeams === 'true' && {
+          totalTeams: leagues.reduce((acc, league) => acc + (league.Teams?.length || 0), 0),
+          averageTeamsPerLeague:
+            leagues.length > 0
+              ? Math.round(
+                  (leagues.reduce((acc, league) => acc + (league.Teams?.length || 0), 0) /
+                    leagues.length) *
+                    100
+                ) / 100
+              : 0,
+        }),
+        ...(country && { filteredByCountry: country }),
+        ...(search && { searchQuery: search }),
+      };
 
       res.status(200).json({
         success: true,
         data: leagues,
-        message: 'Leagues retrieved successfully',
+        meta: {
+          statistics: stats,
+          filters: {
+            ...(country && { country }),
+            ...(search && { search }),
+            includeTeams: includeTeams === 'true',
+          },
+        },
+        message: `Successfully retrieved ${leagues.length} league(s)${
+          country ? ` from ${country}` : ''
+        }${search ? ` matching "${search}"` : ''}`,
       });
     } catch (error) {
-      console.error('Error in getAllLeagues:', error);
       next(error);
     }
   }
 
   /**
-   * Get league by ID
+   * Get league by ID with detailed information
    * @route GET /api/leagues/:id
    */
   static async getLeagueById(req, res, next) {
     try {
       const { id } = req.params;
+      const { includeTeams = 'true' } = req.query;
 
-      // Validate ID
-      if (!id || isNaN(id)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Valid league ID is required',
+      // Enhanced validation
+      if (!id || isNaN(id) || parseInt(id) <= 0) {
+        throw new BadRequestError('League ID must be a positive number', {
+          providedValue: id,
+          expectedFormat: 'positive integer',
         });
       }
 
-      const league = await LeagueService.getLeagueById(id);
+      const leagueOptions = {
+        where: { id: parseInt(id) },
+        ...(includeTeams === 'true' && {
+          include: [
+            {
+              model: Team,
+              attributes: ['id', 'name', 'logoUrl', 'country', 'foundedYear', 'stadiumName'],
+              order: [['name', 'ASC']],
+            },
+          ],
+        }),
+      };
+
+      const league = await League.findOne(leagueOptions);
 
       if (!league) {
-        return res.status(404).json({
-          success: false,
-          message: 'League not found',
+        throw new NotFoundError(`League with ID ${id} not found`, {
+          resource: 'League',
+          searchedId: id,
         });
       }
+
+      // Enhanced league information
+      const enhancedLeague = {
+        ...league.toJSON(),
+        meta: {
+          ...(includeTeams === 'true' && {
+            totalTeams: league.Teams?.length || 0,
+            teamCountries:
+              [...new Set(league.Teams?.map((team) => team.country).filter(Boolean))] || [],
+          }),
+          dataSource: league.externalRef ? 'External API' : 'Manual Entry',
+          lastUpdated: league.updatedAt,
+        },
+      };
 
       res.status(200).json({
         success: true,
-        data: league,
-        message: 'League retrieved successfully',
+        data: enhancedLeague,
+        message: `League details for ${league.name} retrieved successfully`,
       });
     } catch (error) {
-      console.error('Error in getLeagueById:', error);
       next(error);
     }
   }
 
   /**
-   * Synchronize league from external API to database
+   * Synchronize league from external API with enhanced validation and feedback
    * @route POST /api/leagues/sync
    */
   static async synchronizeLeagueFromAPI(req, res, next) {
     try {
       const { leagueName, leagueCountry } = req.body;
 
-      // Validate required fields
+      // Enhanced validation
+      const validationErrors = [];
+
       if (!leagueName?.trim()) {
-        return res.status(400).json({
-          success: false,
+        validationErrors.push({
+          field: 'leagueName',
           message: 'League name is required and cannot be empty',
+        });
+      } else if (leagueName.trim().length < 2) {
+        validationErrors.push({
+          field: 'leagueName',
+          message: 'League name must be at least 2 characters long',
         });
       }
 
       if (!leagueCountry?.trim()) {
-        return res.status(400).json({
-          success: false,
+        validationErrors.push({
+          field: 'leagueCountry',
           message: 'Country is required and cannot be empty',
+        });
+      } else if (leagueCountry.trim().length < 2) {
+        validationErrors.push({
+          field: 'leagueCountry',
+          message: 'Country must be at least 2 characters long',
+        });
+      }
+
+      if (validationErrors.length > 0) {
+        throw new BadRequestError('League synchronization validation failed', {
+          validationErrors,
+          suggestion: 'Please provide valid league name and country',
         });
       }
 
       // Check if league already exists
-      const existingLeague = await LeagueService.findExistingLeague(leagueName, leagueCountry);
-
-      if (existingLeague) {
-        return res.status(409).json({
-          success: false,
-          message: 'League already exists in database',
-          data: existingLeague,
-        });
-      }
-
-      // Fetch leagues from external API
-      const response = await http('/', {
-        params: {
-          action: 'get_leagues',
+      const existingLeague = await League.findOne({
+        where: {
+          name: leagueName.trim(),
+          country: leagueCountry.trim(),
         },
       });
 
-      if (!response.data || !Array.isArray(response.data)) {
-        return res.status(502).json({
-          success: false,
-          message: 'Invalid response from external API',
-        });
+      if (existingLeague) {
+        throw new ConflictError(
+          `League "${leagueName}" from "${leagueCountry}" already exists in database`,
+          {
+            existingLeague: {
+              id: existingLeague.id,
+              name: existingLeague.name,
+              country: existingLeague.country,
+              createdAt: existingLeague.createdAt,
+            },
+          }
+        );
       }
 
-      // Find matching league
+      // Fetch leagues from external API
+      let response;
+      try {
+        response = await http('/', {
+          params: {
+            action: 'get_leagues',
+          },
+        });
+      } catch (apiError) {
+        const error = new Error('Failed to connect to external league API');
+        error.name = 'BadGateway';
+        error.statusCode = 502;
+        error.originalError = apiError.message;
+        throw error;
+      }
+
+      if (!response.data || !Array.isArray(response.data)) {
+        const error = new Error('Invalid response format from external API');
+        error.name = 'BadGateway';
+        error.statusCode = 502;
+        error.details = {
+          responseType: typeof response.data,
+          isArray: Array.isArray(response.data),
+        };
+        throw error;
+      }
+
+      // Find matching league with case-insensitive search
       const apiLeagueData = response.data.find(
         (league) =>
-          league.league_name === leagueName.trim() && league.country_name === leagueCountry.trim()
+          league.league_name?.toLowerCase().trim() === leagueName.toLowerCase().trim() &&
+          league.country_name?.toLowerCase().trim() === leagueCountry.toLowerCase().trim()
       );
 
       if (!apiLeagueData) {
-        return res.status(404).json({
-          success: false,
-          message: `League '${leagueName}' from '${leagueCountry}' not found in external API`,
-        });
+        // Provide helpful suggestions
+        const similarLeagues = response.data
+          .filter(
+            (league) =>
+              league.league_name?.toLowerCase().includes(leagueName.toLowerCase()) ||
+              league.country_name?.toLowerCase().includes(leagueCountry.toLowerCase())
+          )
+          .slice(0, 5);
+
+        throw new NotFoundError(
+          `League "${leagueName}" from "${leagueCountry}" not found in external API`,
+          {
+            searchedFor: { leagueName, leagueCountry },
+            totalAvailableLeagues: response.data.length,
+            ...(similarLeagues.length > 0 && {
+              suggestions: similarLeagues.map((league) => ({
+                name: league.league_name,
+                country: league.country_name,
+                id: league.league_id,
+              })),
+            }),
+          }
+        );
       }
 
       // Create league in database
-      const newLeague = await LeagueService.createLeague(apiLeagueData);
+      const newLeague = await League.create({
+        name: apiLeagueData.league_name,
+        country: apiLeagueData.country_name,
+        externalRef: apiLeagueData.league_id,
+        logoUrl: apiLeagueData.league_logo || null,
+      });
 
       res.status(201).json({
         success: true,
-        data: newLeague,
-        message: 'League synchronized successfully',
+        data: {
+          league: newLeague,
+          sourceData: {
+            externalApiId: apiLeagueData.league_id,
+            logoAvailable: !!apiLeagueData.league_logo,
+            syncedAt: new Date(),
+          },
+        },
+        message: `League "${newLeague.name}" from "${newLeague.country}" synchronized successfully from external API`,
       });
     } catch (error) {
-      console.error('Error in synchronizeLeagueFromAPI:', error);
       next(error);
     }
   }

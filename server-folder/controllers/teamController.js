@@ -1,6 +1,5 @@
-const TeamService = require('../services/teamService');
-const PlayerService = require('../services/playerService');
-const { League, Player } = require('../models');
+const { Team, League, Player } = require('../models');
+const { Op } = require('sequelize');
 const { http } = require('../helpers/http');
 const qs = require('qs');
 
@@ -16,14 +15,10 @@ class TeamController {
     try {
       const { filter, q, page } = qs.parse(req.query);
 
-      const filters = {
-        // Only add filters if they have values
-        country: filter || null,
-        search: q || null,
-        // Only add pagination if page is provided
-        page: page?.number || null,
-        limit: page?.size || null,
-        includeModels: [
+      const queryOptions = {
+        where: {},
+        order: [['name', 'ASC']],
+        include: [
           {
             model: League,
             attributes: ['name', 'country'],
@@ -31,16 +26,47 @@ class TeamController {
         ],
       };
 
-      const result = await TeamService.getTeamsWithPagination(filters);
+      // Only add pagination if page is provided
+      if (page?.number && page?.size) {
+        queryOptions.limit = Math.min(parseInt(page.size), 50);
+        queryOptions.offset = (parseInt(page.number) - 1) * Math.min(parseInt(page.size), 50);
+      }
+
+      if (filter && filter.trim() !== '') {
+        queryOptions.where.country = filter;
+      }
+
+      if (q && q.trim() !== '') {
+        queryOptions.where.name = { [Op.iLike]: `%${q}%` };
+      }
+
+      const result = await Team.findAndCountAll(queryOptions);
+
+      // Build pagination metadata
+      let paginationMeta = null;
+      if (page?.number && page?.size) {
+        const totalPages = Math.ceil(result.count / queryOptions.limit);
+        paginationMeta = {
+          page: parseInt(page.number),
+          totalPages: totalPages,
+          total: result.count,
+          hasNext: parseInt(page.number) < totalPages,
+          hasPrev: parseInt(page.number) > 1,
+        };
+      } else {
+        // No pagination - return simple meta
+        paginationMeta = {
+          total: result.count,
+        };
+      }
 
       res.status(200).json({
         success: true,
-        data: result.teams,
-        meta: result.pagination,
+        data: result.rows,
+        meta: paginationMeta,
         message: 'Teams retrieved successfully',
       });
     } catch (error) {
-      console.error('Error in getAllTeamsWithFilters:', error);
       next(error);
     }
   }
@@ -56,26 +82,23 @@ class TeamController {
 
       // Validate league ID
       if (!leagueId || isNaN(leagueId)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Valid league ID is required',
-        });
+        const error = new Error('Valid league ID is required');
+        error.name = 'BadRequest';
+        throw error;
       }
 
       // Check if league exists
       const league = await League.findByPk(leagueId);
       if (!league) {
-        return res.status(404).json({
-          success: false,
-          message: 'League not found',
-        });
+        const error = new Error('League not found');
+        error.name = 'NotFound';
+        throw error;
       }
 
-      const filters = {
-        leagueId: leagueId,
-        page: page?.number || 1,
-        limit: page?.size || 10,
-        includeModels: [
+      const queryOptions = {
+        where: { leagueId: leagueId },
+        order: [['name', 'ASC']],
+        include: [
           {
             model: League,
             attributes: ['name', 'country'],
@@ -83,17 +106,40 @@ class TeamController {
         ],
       };
 
-      const result = await TeamService.getTeamsWithPagination(filters);
+      // Only add pagination if page is provided
+      if (page?.number && page?.size) {
+        queryOptions.limit = Math.min(parseInt(page.size), 50);
+        queryOptions.offset = (parseInt(page.number) - 1) * Math.min(parseInt(page.size), 50);
+      }
+
+      const result = await Team.findAndCountAll(queryOptions);
+
+      // Build pagination metadata
+      let paginationMeta = null;
+      if (page?.number && page?.size) {
+        const totalPages = Math.ceil(result.count / queryOptions.limit);
+        paginationMeta = {
+          page: parseInt(page.number),
+          totalPages: totalPages,
+          total: result.count,
+          hasNext: parseInt(page.number) < totalPages,
+          hasPrev: parseInt(page.number) > 1,
+        };
+      } else {
+        // No pagination - return simple meta
+        paginationMeta = {
+          total: result.count,
+        };
+      }
 
       res.status(200).json({
         success: true,
-        data: result.teams,
-        meta: result.pagination,
+        data: result.rows,
+        meta: paginationMeta,
         message: 'Teams retrieved successfully',
         league: league.name,
       });
     } catch (error) {
-      console.error('Error in getTeamsByLeague:', error);
       next(error);
     }
   }
@@ -108,29 +154,30 @@ class TeamController {
 
       // Validate ID
       if (!id || isNaN(id)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Valid team ID is required',
-        });
+        const error = new Error('Valid team ID is required');
+        error.name = 'BadRequest';
+        throw error;
       }
 
-      const team = await TeamService.getTeamById(id, [
-        {
-          model: League,
-          attributes: ['name', 'country'],
-        },
-        {
-          model: Player,
-          limit: 10,
-          order: [['shirtNumber', 'ASC']],
-        },
-      ]);
+      const team = await Team.findOne({
+        where: { id: id },
+        include: [
+          {
+            model: League,
+            attributes: ['name', 'country'],
+          },
+          {
+            model: Player,
+            limit: 10,
+            order: [['shirtNumber', 'ASC']],
+          },
+        ],
+      });
 
       if (!team) {
-        return res.status(404).json({
-          success: false,
-          message: 'Team not found',
-        });
+        const error = new Error('Team not found');
+        error.name = 'NotFound';
+        throw error;
       }
 
       res.status(200).json({
@@ -139,7 +186,6 @@ class TeamController {
         message: 'Team retrieved successfully',
       });
     } catch (error) {
-      console.error('Error in getTeamById:', error);
       next(error);
     }
   }
@@ -154,18 +200,16 @@ class TeamController {
 
       // Validate league ID
       if (!leagueId || isNaN(leagueId)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Valid league ID is required',
-        });
+        const error = new Error('Valid league ID is required');
+        error.name = 'BadRequest';
+        throw error;
       }
 
       const league = await League.findByPk(leagueId);
       if (!league) {
-        return res.status(404).json({
-          success: false,
-          message: 'League not found',
-        });
+        const error = new Error('League not found');
+        error.name = 'NotFound';
+        throw error;
       }
 
       // Fetch teams from external API
@@ -189,19 +233,96 @@ class TeamController {
       let totalPlayersSynced = 0;
       const syncResults = [];
 
+      // Helper function to synchronize team from API
+      const synchronizeTeamFromAPI = async (teamData, leagueId) => {
+        try {
+          // Validate required data
+          if (!teamData.team_name || !teamData.team_key) {
+            throw new Error('Missing required team data: team_name or team_key');
+          }
+
+          const team = await Team.upsert({
+            leagueId: leagueId,
+            name: teamData.team_name,
+            logoUrl: teamData.team_badge || null,
+            foundedYear: teamData.team_founded || null,
+            country: teamData.team_country || null,
+            stadiumName: teamData.venue?.venue_name || null,
+            venueAddress: teamData.venue?.venue_address || null,
+            stadiumCity: teamData.venue?.venue_city || null,
+            stadiumCapacity: teamData.venue?.venue_capacity || null,
+            coach: teamData.coaches?.[0]?.coach_name || null,
+            externalRef: teamData.team_key,
+            lastSyncedAt: new Date(),
+          });
+
+          return team;
+        } catch (error) {
+          throw error;
+        }
+      };
+
+      // Helper function to batch synchronize players
+      const batchSynchronizePlayers = async (playersData, teamId) => {
+        try {
+          const results = {
+            successful: 0,
+            failed: 0,
+            errors: [],
+          };
+
+          if (!Array.isArray(playersData) || playersData.length === 0) {
+            return results;
+          }
+
+          const playerPromises = playersData.map(async (playerData) => {
+            try {
+              // Validate required data
+              if (!playerData.player_name || !playerData.player_id) {
+                throw new Error('Missing required player data: player_name or player_id');
+              }
+
+              await Player.upsert({
+                fullName: playerData.player_name,
+                primaryPosition: playerData.player_type || null,
+                thumbUrl: playerData.player_image || null,
+                externalRef: playerData.player_id,
+                age: playerData.player_age || null,
+                teamId: teamId,
+                shirtNumber: playerData.player_number || null,
+              });
+
+              results.successful++;
+              return { success: true, playerName: playerData.player_name };
+            } catch (error) {
+              results.failed++;
+              const errorInfo = {
+                playerName: playerData.player_name,
+                error: error.message,
+              };
+              results.errors.push(errorInfo);
+              return { success: false, ...errorInfo };
+            }
+          });
+
+          await Promise.all(playerPromises);
+
+          return results;
+        } catch (error) {
+          throw error;
+        }
+      };
+
       // Process teams sequentially to avoid overwhelming the database
       for (const teamData of response.data) {
         try {
           // Sync team
-          const team = await TeamService.synchronizeTeamFromAPI(teamData, leagueId);
+          const team = await synchronizeTeamFromAPI(teamData, leagueId);
           const teamId = team[0].id;
           totalTeamsSynced++;
 
           // Sync players for this team
-          const playerResults = await PlayerService.batchSynchronizePlayers(
-            teamData.players || [],
-            teamId
-          );
+          const playerResults = await batchSynchronizePlayers(teamData.players || [], teamId);
 
           totalPlayersSynced += playerResults.successful;
 
@@ -213,7 +334,6 @@ class TeamController {
             playerErrors: playerResults.errors,
           });
         } catch (error) {
-          console.error(`Error syncing team ${teamData.team_name}:`, error);
           syncResults.push({
             team: teamData.team_name,
             teamSynced: false,
@@ -234,7 +354,6 @@ class TeamController {
         details: process.env.NODE_ENV === 'development' ? syncResults : undefined,
       });
     } catch (error) {
-      console.error('Error in synchronizeTeamsAndPlayersFromAPI:', error);
       next(error);
     }
   }

@@ -1,6 +1,5 @@
-const MatchService = require('../services/matchService');
-const LeagueService = require('../services/leagueService');
-const TeamService = require('../services/teamService');
+const { Match, League, Team } = require('../models');
+const { Op } = require('sequelize');
 const { http } = require('../helpers/http');
 const qs = require('qs');
 
@@ -21,18 +20,16 @@ class MatchController {
       // If leagueId is provided via params, validate it
       if (leagueId) {
         if (isNaN(leagueId)) {
-          return res.status(400).json({
-            success: false,
-            message: 'Valid league ID is required',
-          });
+          const error = new Error('Valid league ID is required');
+          error.name = 'BadRequest';
+          throw error;
         }
 
-        const league = await LeagueService.getLeagueById(leagueId);
+        const league = await League.findByPk(leagueId);
         if (!league) {
-          return res.status(404).json({
-            success: false,
-            message: 'League not found',
-          });
+          const error = new Error('League not found');
+          error.name = 'NotFound';
+          throw error;
         }
       }
 
@@ -60,49 +57,97 @@ class MatchController {
         }
       }
 
-      const filters = {
-        leagueId: leagueId,
-        status: status,
-        date: processedDate,
-        // Only add pagination if page is provided
-        page: page?.number || null,
-        limit: page?.size || null,
-        includeModels: [
+      const whereConditions = {};
+
+      // Apply filters
+      if (leagueId) {
+        whereConditions.league_id = leagueId;
+      }
+
+      if (status) {
+        whereConditions.status = status;
+      }
+
+      if (processedDate) {
+        // Convert date string to proper format for database comparison
+        const parsedDate = new Date(processedDate);
+        if (!isNaN(parsedDate.getTime())) {
+          // Create date range for the entire day
+          const startOfDay = new Date(parsedDate);
+          startOfDay.setHours(0, 0, 0, 0);
+
+          const endOfDay = new Date(parsedDate);
+          endOfDay.setHours(23, 59, 59, 999);
+
+          whereConditions.match_date = {
+            [Op.between]: [startOfDay, endOfDay],
+          };
+        }
+      }
+
+      const options = {
+        where: whereConditions,
+        order: [['match_date', 'DESC']],
+        include: [
           {
-            model: require('../models').Team,
+            model: Team,
             as: 'HomeTeam',
             attributes: ['name', 'logoUrl'],
           },
           {
-            model: require('../models').Team,
+            model: Team,
             as: 'AwayTeam',
             attributes: ['name', 'logoUrl'],
           },
           {
-            model: require('../models').League,
+            model: League,
             attributes: ['name', 'country'],
           },
         ],
       };
 
-      const result = await MatchService.getMatchesWithPagination(filters);
+      // Only add pagination if page is provided
+      if (page?.number && page?.size) {
+        options.limit = parseInt(page.size);
+        options.offset = (parseInt(page.number) - 1) * parseInt(page.size);
+      }
+
+      const { count, rows } = await Match.findAndCountAll(options);
+
+      // Build pagination metadata
+      let paginationMeta = null;
+      if (page?.number && page?.size) {
+        const totalPages = Math.ceil(count / parseInt(page.size));
+        paginationMeta = {
+          currentPage: parseInt(page.number),
+          totalPages: totalPages,
+          totalItems: count,
+          itemsPerPage: parseInt(page.size),
+          hasNext: parseInt(page.number) < totalPages,
+          hasPrev: parseInt(page.number) > 1,
+        };
+      } else {
+        // No pagination - return simple meta
+        paginationMeta = {
+          totalItems: count,
+        };
+      }
 
       // If it's a league-specific request, add league info to response
       const response = {
         success: true,
-        data: result.matches,
-        meta: result.pagination,
+        data: rows,
+        meta: paginationMeta,
         message: 'Matches retrieved successfully',
       };
 
       if (leagueId) {
-        const league = await LeagueService.getLeagueById(leagueId);
+        const league = await League.findByPk(leagueId);
         response.league = league?.name;
       }
 
       res.status(200).json(response);
     } catch (error) {
-      console.error('Error in getAllMatchesWithFilters:', error);
       next(error);
     }
   }
@@ -117,18 +162,16 @@ class MatchController {
 
       // Validate league ID
       if (!leagueId || isNaN(leagueId)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Valid league ID is required',
-        });
+        const error = new Error('Valid league ID is required');
+        error.name = 'BadRequest';
+        throw error;
       }
 
-      const league = await LeagueService.getLeagueById(leagueId);
+      const league = await League.findByPk(leagueId);
       if (!league) {
-        return res.status(404).json({
-          success: false,
-          message: 'League not found',
-        });
+        const error = new Error('League not found');
+        error.name = 'NotFound';
+        throw error;
       }
 
       // Fetch matches from external API
@@ -151,12 +194,84 @@ class MatchController {
         });
       }
 
-      // Synchronize matches using the service
-      const results = await MatchService.batchSynchronizeMatches(
-        matches,
-        league,
-        TeamService.getTeamByExternalRef
-      );
+      // Helper function to get team by external ref
+      const getTeamByExternalRef = async (externalRef) => {
+        try {
+          if (!externalRef) {
+            return null;
+          }
+          return await Team.findOne({ where: { externalRef } });
+        } catch (error) {
+          // Error getting team by externalRef
+          return null;
+        }
+      };
+
+      // Synchronize matches
+      const results = {
+        successful: 0,
+        failed: 0,
+        details: [],
+      };
+
+      // Process matches in parallel with proper error handling
+      const syncPromises = matches.map(async (matchData) => {
+        try {
+          const [homeTeam, awayTeam] = await Promise.all([
+            getTeamByExternalRef(matchData.match_hometeam_id),
+            getTeamByExternalRef(matchData.match_awayteam_id),
+          ]);
+
+          // Skip if teams are not found
+          if (!homeTeam || !awayTeam) {
+            const result = {
+              success: false,
+              matchId: matchData.match_id,
+              reason: 'Teams not found',
+              homeTeam: homeTeam?.name || 'N/A',
+              awayTeam: awayTeam?.name || 'N/A',
+            };
+            results.failed++;
+            results.details.push(result);
+            return result;
+          }
+
+          // Synchronize match
+          const [matchResult] = await Match.upsert({
+            league_id: league.id,
+            home_team_id: homeTeam.id,
+            away_team_id: awayTeam.id,
+            match_date: matchData.match_date || null,
+            match_time: matchData.match_time || null,
+            home_score: matchData.match_hometeam_ft_score || null,
+            away_score: matchData.match_awayteam_ft_score || null,
+            status: matchData.match_status || 'upcoming',
+            venue: homeTeam.stadiumName || null,
+            externalRef: matchData.match_id,
+          });
+
+          const result = {
+            success: true,
+            matchId: matchData.match_id,
+            match: matchResult,
+          };
+
+          results.successful++;
+          results.details.push(result);
+          return result;
+        } catch (error) {
+          const errorResult = {
+            success: false,
+            matchId: matchData.match_id,
+            error: error.message,
+          };
+          results.failed++;
+          results.details.push(errorResult);
+          return errorResult;
+        }
+      });
+
+      await Promise.all(syncPromises);
 
       res.status(200).json({
         success: true,
@@ -168,7 +283,6 @@ class MatchController {
         details: process.env.NODE_ENV === 'development' ? results.details : undefined,
       });
     } catch (error) {
-      console.error('Error in synchronizeMatchesFromAPI:', error);
       next(error);
     }
   }

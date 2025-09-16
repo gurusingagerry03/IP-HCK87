@@ -1,6 +1,4 @@
-const PlayerService = require('../services/playerService');
-const TeamService = require('../services/teamService');
-const { Team } = require('../models');
+const { Player, Team } = require('../models');
 
 /**
  * Player Controller - Handles player-related HTTP requests
@@ -12,12 +10,17 @@ class PlayerController {
    */
   static async getAllPlayers(req, res, next) {
     try {
-      const players = await PlayerService.getAllPlayers([
-        {
-          model: Team,
-          attributes: ['name', 'country'],
-        },
-      ]);
+      const options = {
+        order: [['createdAt', 'DESC']],
+        include: [
+          {
+            model: Team,
+            attributes: ['name', 'country'],
+          },
+        ],
+      };
+
+      const players = await Player.findAll(options);
 
       res.status(200).json({
         success: true,
@@ -25,7 +28,6 @@ class PlayerController {
         message: 'Players retrieved successfully',
       });
     } catch (error) {
-      console.error('Error in getAllPlayers:', error);
       next(error);
     }
   }
@@ -40,27 +42,34 @@ class PlayerController {
 
       // Validate teamId
       if (!teamId || isNaN(teamId)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Valid team ID is required',
-        });
+        const error = new Error('Valid team ID is required');
+        error.name = 'BadRequest';
+        throw error;
       }
 
       // Check if team exists
-      const team = await TeamService.getTeamById(teamId);
+      const team = await Team.findOne({ where: { id: teamId } });
       if (!team) {
-        return res.status(404).json({
-          success: false,
-          message: 'Team not found',
-        });
+        const error = new Error('Team not found');
+        error.name = 'NotFound';
+        throw error;
       }
 
-      const players = await PlayerService.getPlayersByTeamId(teamId, [
-        {
-          model: Team,
-          attributes: ['name', 'country'],
-        },
-      ]);
+      const options = {
+        where: { teamId },
+        order: [
+          ['shirtNumber', 'ASC'],
+          ['fullName', 'ASC'],
+        ],
+        include: [
+          {
+            model: Team,
+            attributes: ['name', 'country'],
+          },
+        ],
+      };
+
+      const players = await Player.findAll(options);
 
       res.status(200).json({
         success: true,
@@ -69,7 +78,6 @@ class PlayerController {
         message: 'Players retrieved successfully',
       });
     } catch (error) {
-      console.error('Error in getPlayersByTeamId:', error);
       next(error);
     }
   }
@@ -84,10 +92,9 @@ class PlayerController {
 
       // Validate ID
       if (!id || isNaN(id)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Valid player ID is required',
-        });
+        const error = new Error('Valid player ID is required');
+        error.name = 'BadRequest';
+        throw error;
       }
 
       const player = await Player.findByPk(id, {
@@ -100,10 +107,9 @@ class PlayerController {
       });
 
       if (!player) {
-        return res.status(404).json({
-          success: false,
-          message: 'Player not found',
-        });
+        const error = new Error('Player not found');
+        error.name = 'NotFound';
+        throw error;
       }
 
       res.status(200).json({
@@ -112,7 +118,6 @@ class PlayerController {
         message: 'Player retrieved successfully',
       });
     } catch (error) {
-      console.error('Error in getPlayerById:', error);
       next(error);
     }
   }
