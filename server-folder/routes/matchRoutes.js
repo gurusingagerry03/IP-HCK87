@@ -1,16 +1,10 @@
-const express = require('express');
-const MatchController = require('../controllers/matchController');
-const router = express.Router();
+const router = require('express').Router();
+const matchController = require('../controllers/matchController');
 
-/**
- * Match Routes
- * Base path: /api/matches
- */
+// Keep only endpoints that client uses
+router.get('/league/:id', matchController.getMatchesByLeagueId);
 
-// GET /api/matches/league/:leagueId - Get matches by league ID
-router.get('/league/:leagueId', MatchController.getAllMatchesWithFilters);
-
-// POST /api/matches/sync/:leagueId - Synchronize matches from external API
-router.post('/sync/:leagueId', MatchController.synchronizeMatchesFromAPI);
+// Sync endpoints
+router.post('/sync/:leagueId', matchController.synchronizeMatchesByLeagueId);
 
 module.exports = router;

@@ -26,6 +26,7 @@
   "license": "MIT",
   "type": "commonjs",
   "dependencies": {
+    "@google/genai": "^1.19.0",
     "axios": "^1.12.2",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",

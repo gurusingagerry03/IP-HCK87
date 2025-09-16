@@ -1,22 +1,11 @@
-const express = require('express');
-const TeamController = require('../controllers/teamController');
-const router = express.Router();
+const router = require('express').Router();
+const teamController = require('../controllers/teamController');
 
-/**
- * Team Routes
- * Base path: /api/teams
- */
+// Keep only endpoints that client uses
+router.get('/', teamController.getAllTeams);
+router.get('/:id', teamController.getTeamById);
 
-// GET /api/teams - Get teams with filtering and pagination
-router.get('/', TeamController.getAllTeamsWithFilters);
-
-// GET /api/teams/league/:leagueId - Get teams by league ID
-router.get('/league/:leagueId', TeamController.getTeamsByLeague);
-
-// GET /api/teams/:id - Get team by ID with details
-router.get('/:id', TeamController.getTeamById);
-
-// POST /api/teams/sync/:leagueId - Synchronize teams and players from external API
-router.post('/sync/:leagueId', TeamController.synchronizeTeamsAndPlayersFromAPI);
+// Sync endpoints
+router.post('/sync/:leagueId', teamController.synchronizeTeamsAndPlayersFromAPI);
 
 module.exports = router;

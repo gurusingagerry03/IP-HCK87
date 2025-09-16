@@ -1,17 +1,7 @@
-// create router for user routes
-const express = require('express');
-const UserController = require('../controllers/userController');
-const authenticate = require('../middlewares/authenticate');
-const router = express.Router();
+const router = require('express').Router();
+const userController = require('../controllers/userController');
 
-/**
- * User Routes
- * Base path: /api/users
- */
+router.post('/register', userController.register);
+router.post('/login', userController.login);
 
-// POST /api/users/register - Create a new user (registration)
-router.post('/register', UserController.register);
-router.post('/login', UserController.login);
-//get user details
-router.get('/:id', authenticate, UserController.getUserById);
 module.exports = router;

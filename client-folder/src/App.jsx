@@ -6,9 +6,11 @@ import Clubs from './pages/Clubs.jsx';
 import Favorites from './pages/Favorites.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
+import Profile from './pages/Profile.jsx';
 import ClubDetail from './pages/ClubDetail.jsx';
 import LeagueDetail from './pages/LeagueDetail.jsx';
 import ApiTest from './components/ApiTest.jsx';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
 import { Route, Routes, Outlet } from 'react-router';
 import { BrowserRouter } from 'react-router';
 
@@ -42,7 +44,8 @@ function MainRoute() {
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/clubs" element={<Clubs />} />
-        <Route path="/favorites" element={<Favorites />} />
+        <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/test" element={<ApiTest />} />

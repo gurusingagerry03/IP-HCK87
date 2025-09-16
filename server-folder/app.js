@@ -18,7 +18,7 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json());
 
 // Custom middlewares
 app.use(LoggingMiddleware.logRequests());

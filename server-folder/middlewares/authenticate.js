@@ -1,31 +1,24 @@
-// create middleware for authenticating users use helpers/jwt.js
 const { verifyToken } = require('../helpers/jwt');
-const { UnauthorizedError } = require('../helpers/customErrors');
 const { User } = require('../models');
 
-module.exports = async (req, res, next) => {
+const authenticate = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedError('No token provided or invalid format', {
-        providedValue: authHeader,
-        expectedFormat: 'Bearer <token>',
-      });
+    const bearerToken = req.headers.authorization;
+    if (!bearerToken) {
+      throw { name: 'JsonWebTokenError' };
     }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = verifyToken(token);
-    // check apakah hasil decode ada di database
-    const user = await User.findByPk(decoded.id);
+    const [type, token] = bearerToken.split(' ');
+    const data = verifyToken(token);
+    const user = await User.findByPk(data.id);
     if (!user) {
-      throw new UnauthorizedError('User not found', {
-        userId: decoded.id,
-      });
+      throw { name: 'JsonWebTokenError' };
     }
-    req.user = decoded;
+    req.user = user;
     next();
   } catch (error) {
     next(error);
   }
 };
+
+module.exports = { authenticate };
 // --- IGNORE ---

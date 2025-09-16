@@ -1,357 +1,240 @@
 const { Team, League, Player } = require('../models');
-const { Op } = require('sequelize');
 const { http } = require('../helpers/http');
-const qs = require('qs');
+const { Op } = require('sequelize');
 
-/**
- * Team Controller - Handles team-related HTTP requests
- */
-class TeamController {
-  /**
-   * Get teams with filtering, search, and pagination
-   * @route GET /api/teams
-   */
-  static async getAllTeamsWithFilters(req, res, next) {
+class teamController {
+  static async getAllTeams(req, res, next) {
     try {
-      const { filter, q, page } = qs.parse(req.query);
+      const {
+        q: search,
+        filter: country,
+        sort = 'name',
+        'page[number]': pageNumber = 1,
+        'page[size]': pageSize = 10,
+      } = req.query;
 
-      const queryOptions = {
-        where: {},
-        order: [['name', 'ASC']],
+      let whereCondition = {};
+
+      if (search?.trim()) {
+        whereCondition = {
+          ...whereCondition,
+          [Op.or]: [
+            { name: { [Op.iLike]: `%${search.trim()}%` } },
+            { country: { [Op.iLike]: `%${search.trim()}%` } },
+          ],
+        };
+      }
+
+      if (country?.trim()) {
+        whereCondition.country = {
+          [Op.iLike]: `%${country.trim()}%`,
+        };
+      }
+
+      const limit = Math.min(parseInt(pageSize), 50);
+      const offset = (parseInt(pageNumber) - 1) * limit;
+
+      const { count, rows } = await Team.findAndCountAll({
+        where: whereCondition,
+        limit: limit,
+        offset: offset,
+        order: [[sort, 'ASC']],
         include: [
           {
             model: League,
-            attributes: ['name', 'country'],
+            attributes: ['id', 'name', 'country'],
           },
         ],
-      };
+      });
 
-      // Only add pagination if page is provided
-      if (page?.number && page?.size) {
-        queryOptions.limit = Math.min(parseInt(page.size), 50);
-        queryOptions.offset = (parseInt(page.number) - 1) * Math.min(parseInt(page.size), 50);
-      }
-
-      if (filter && filter.trim() !== '') {
-        queryOptions.where.country = filter;
-      }
-
-      if (q && q.trim() !== '') {
-        queryOptions.where.name = { [Op.iLike]: `%${q}%` };
-      }
-
-      const result = await Team.findAndCountAll(queryOptions);
-
-      // Build pagination metadata
-      let paginationMeta = null;
-      if (page?.number && page?.size) {
-        const totalPages = Math.ceil(result.count / queryOptions.limit);
-        paginationMeta = {
-          page: parseInt(page.number),
-          totalPages: totalPages,
-          total: result.count,
-          hasNext: parseInt(page.number) < totalPages,
-          hasPrev: parseInt(page.number) > 1,
-        };
-      } else {
-        // No pagination - return simple meta
-        paginationMeta = {
-          total: result.count,
-        };
-      }
+      const totalPages = Math.ceil(count / limit);
+      const currentPage = parseInt(pageNumber);
 
       res.status(200).json({
-        success: true,
-        data: result.rows,
-        meta: paginationMeta,
-        message: 'Teams retrieved successfully',
+        data: rows,
+        meta: {
+          page: currentPage,
+          totalPages: totalPages,
+          total: count,
+          hasNext: currentPage < totalPages,
+          hasPrev: currentPage > 1,
+        },
       });
     } catch (error) {
       next(error);
     }
   }
 
-  /**
-   * Get teams by league ID
-   * @route GET /api/teams/league/:leagueId
-   */
-  static async getTeamsByLeague(req, res, next) {
-    try {
-      const { leagueId } = req.params;
-      const { page } = qs.parse(req.query);
-
-      // Validate league ID
-      if (!leagueId || isNaN(leagueId)) {
-        const error = new Error('Valid league ID is required');
-        error.name = 'BadRequest';
-        throw error;
-      }
-
-      // Check if league exists
-      const league = await League.findByPk(leagueId);
-      if (!league) {
-        const error = new Error('League not found');
-        error.name = 'NotFound';
-        throw error;
-      }
-
-      const queryOptions = {
-        where: { leagueId: leagueId },
-        order: [['name', 'ASC']],
-        include: [
-          {
-            model: League,
-            attributes: ['name', 'country'],
-          },
-        ],
-      };
-
-      // Only add pagination if page is provided
-      if (page?.number && page?.size) {
-        queryOptions.limit = Math.min(parseInt(page.size), 50);
-        queryOptions.offset = (parseInt(page.number) - 1) * Math.min(parseInt(page.size), 50);
-      }
-
-      const result = await Team.findAndCountAll(queryOptions);
-
-      // Build pagination metadata
-      let paginationMeta = null;
-      if (page?.number && page?.size) {
-        const totalPages = Math.ceil(result.count / queryOptions.limit);
-        paginationMeta = {
-          page: parseInt(page.number),
-          totalPages: totalPages,
-          total: result.count,
-          hasNext: parseInt(page.number) < totalPages,
-          hasPrev: parseInt(page.number) > 1,
-        };
-      } else {
-        // No pagination - return simple meta
-        paginationMeta = {
-          total: result.count,
-        };
-      }
-
-      res.status(200).json({
-        success: true,
-        data: result.rows,
-        meta: paginationMeta,
-        message: 'Teams retrieved successfully',
-        league: league.name,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Get team by ID with details
-   * @route GET /api/teams/:id
-   */
   static async getTeamById(req, res, next) {
     try {
       const { id } = req.params;
 
-      // Validate ID
-      if (!id || isNaN(id)) {
-        const error = new Error('Valid team ID is required');
-        error.name = 'BadRequest';
-        throw error;
+      if (!id || isNaN(id) || parseInt(id) <= 0) {
+        throw { name: 'BadRequest', message: 'Team ID must be a positive number' };
       }
 
-      const team = await Team.findOne({
-        where: { id: id },
+      const team = await Team.findByPk(parseInt(id), {
         include: [
           {
             model: League,
-            attributes: ['name', 'country'],
           },
           {
             model: Player,
-            limit: 10,
-            order: [['shirtNumber', 'ASC']],
           },
         ],
       });
 
       if (!team) {
-        const error = new Error('Team not found');
-        error.name = 'NotFound';
-        throw error;
+        throw { name: 'NotFound', message: `Team with ID ${id} not found` };
       }
 
-      res.status(200).json({
-        success: true,
-        data: team,
-        message: 'Team retrieved successfully',
-      });
+      res.status(200).json(team);
     } catch (error) {
+      console.log(error);
+
       next(error);
     }
   }
 
-  /**
-   * Synchronize teams and players from external API to database
-   * @route POST /api/teams/sync/:leagueId
-   */
   static async synchronizeTeamsAndPlayersFromAPI(req, res, next) {
     try {
       const { leagueId } = req.params;
 
-      // Validate league ID
-      if (!leagueId || isNaN(leagueId)) {
-        const error = new Error('Valid league ID is required');
-        error.name = 'BadRequest';
-        throw error;
+      if (!leagueId) {
+        throw { name: 'BadRequest', message: 'League ID is required' };
       }
 
+      // Check if league exists
       const league = await League.findByPk(leagueId);
       if (!league) {
-        const error = new Error('League not found');
-        error.name = 'NotFound';
-        throw error;
+        throw { name: 'NotFound', message: 'League not found' };
       }
 
-      // Fetch teams from external API
-      const response = await http('/', {
-        params: {
-          action: 'get_teams',
-          league_id: league.externalRef,
-        },
-      });
-
-      if (!response.data || response.data.length === 0) {
-        return res.status(200).json({
-          success: true,
-          message: 'No teams found for synchronization',
-          totalTeams: 0,
-          totalPlayers: 0,
+      let teamsResponse;
+      try {
+        teamsResponse = await http('/', {
+          params: {
+            action: 'get_teams',
+            league_id: league.externalRef || league.id,
+          },
         });
+      } catch (apiError) {
+        throw { name: 'BadRequest', message: 'Failed to connect to external team API' };
       }
 
-      let totalTeamsSynced = 0;
-      let totalPlayersSynced = 0;
-      const syncResults = [];
+      if (!teamsResponse.data || !Array.isArray(teamsResponse.data)) {
+        throw { name: 'BadRequest', message: 'Invalid response from external API' };
+      }
 
-      // Helper function to synchronize team from API
-      const synchronizeTeamFromAPI = async (teamData, leagueId) => {
-        try {
-          // Validate required data
-          if (!teamData.team_name || !teamData.team_key) {
-            throw new Error('Missing required team data: team_name or team_key');
-          }
-
-          const team = await Team.upsert({
-            leagueId: leagueId,
-            name: teamData.team_name,
-            logoUrl: teamData.team_badge || null,
-            foundedYear: teamData.team_founded || null,
-            country: teamData.team_country || null,
-            stadiumName: teamData.venue?.venue_name || null,
-            venueAddress: teamData.venue?.venue_address || null,
-            stadiumCity: teamData.venue?.venue_city || null,
-            stadiumCapacity: teamData.venue?.venue_capacity || null,
-            coach: teamData.coaches?.[0]?.coach_name || null,
-            externalRef: teamData.team_key,
-            lastSyncedAt: new Date(),
-          });
-
-          return team;
-        } catch (error) {
-          throw error;
-        }
+      const syncResults = {
+        teamsAdded: 0,
+        teamsUpdated: 0,
+        playersAdded: 0,
+        playersUpdated: 0,
+        errors: [],
       };
 
-      // Helper function to batch synchronize players
-      const batchSynchronizePlayers = async (playersData, teamId) => {
+      // Process each team
+      for (const apiTeamData of teamsResponse.data) {
         try {
-          const results = {
-            successful: 0,
-            failed: 0,
-            errors: [],
-          };
-
-          if (!Array.isArray(playersData) || playersData.length === 0) {
-            return results;
-          }
-
-          const playerPromises = playersData.map(async (playerData) => {
-            try {
-              // Validate required data
-              if (!playerData.player_name || !playerData.player_id) {
-                throw new Error('Missing required player data: player_name or player_id');
-              }
-
-              await Player.upsert({
-                fullName: playerData.player_name,
-                primaryPosition: playerData.player_type || null,
-                thumbUrl: playerData.player_image || null,
-                externalRef: playerData.player_id,
-                age: playerData.player_age || null,
-                teamId: teamId,
-                shirtNumber: playerData.player_number || null,
-              });
-
-              results.successful++;
-              return { success: true, playerName: playerData.player_name };
-            } catch (error) {
-              results.failed++;
-              const errorInfo = {
-                playerName: playerData.player_name,
-                error: error.message,
-              };
-              results.errors.push(errorInfo);
-              return { success: false, ...errorInfo };
-            }
+          // Check if team exists
+          let team = await Team.findOne({
+            where: {
+              externalRef: apiTeamData.team_key,
+            },
           });
 
-          await Promise.all(playerPromises);
-
-          return results;
-        } catch (error) {
-          throw error;
-        }
-      };
-
-      // Process teams sequentially to avoid overwhelming the database
-      for (const teamData of response.data) {
-        try {
-          // Sync team
-          const team = await synchronizeTeamFromAPI(teamData, leagueId);
-          const teamId = team[0].id;
-          totalTeamsSynced++;
+          if (!team) {
+            // Create new team
+            team = await Team.create({
+              name: apiTeamData.team_name,
+              logoUrl: apiTeamData.team_logo || null,
+              country: apiTeamData.team_country || league.country,
+              foundedYear: apiTeamData.team_founded || null,
+              stadiumName: apiTeamData.venue_name || null,
+              leagueId: leagueId,
+              externalRef: apiTeamData.team_key,
+            });
+            syncResults.teamsAdded++;
+          } else {
+            // Update existing team
+            await team.update({
+              name: apiTeamData.team_name,
+              logoUrl: apiTeamData.team_logo || null,
+              country: apiTeamData.team_country || league.country,
+              foundedYear: apiTeamData.team_founded || null,
+              stadiumName: apiTeamData.venue_name || null,
+            });
+            syncResults.teamsUpdated++;
+          }
 
           // Sync players for this team
-          const playerResults = await batchSynchronizePlayers(teamData.players || [], teamId);
+          let playersResponse;
+          try {
+            playersResponse = await http('/', {
+              params: {
+                action: 'get_players',
+                team_id: apiTeamData.team_key,
+              },
+            });
 
-          totalPlayersSynced += playerResults.successful;
-
-          syncResults.push({
-            team: teamData.team_name,
-            teamSynced: true,
-            playersTotal: teamData.players?.length || 0,
-            playersSynced: playerResults.successful,
-            playerErrors: playerResults.errors,
-          });
-        } catch (error) {
-          syncResults.push({
-            team: teamData.team_name,
-            teamSynced: false,
-            error: error.message,
-            playersTotal: 0,
-            playersSynced: 0,
-          });
+            if (playersResponse.data && Array.isArray(playersResponse.data)) {
+              // Process each player
+              for (const apiPlayerData of playersResponse.data) {
+                try {
+                  let player = await Player.findOne({
+                    where: {
+                      externalRef: apiPlayerData.player_key,
+                    },
+                  });
+                  if (!player) {
+                    // Create new player
+                    await Player.create({
+                      fullName: apiPlayerData.player_name,
+                      primaryPosition: apiPlayerData.player_type || null,
+                      teamId: team.id,
+                      age: apiPlayerData.player_age || null,
+                      externalRef: apiPlayerData.player_key,
+                    });
+                    syncResults.playersAdded++;
+                  } else {
+                    // Update existing player
+                    await player.update({
+                      name: apiPlayerData.player_name,
+                      position: apiPlayerData.player_type || null,
+                      age: apiPlayerData.player_age || null,
+                      nationality: apiPlayerData.player_country || null,
+                      teamId: team.id,
+                    });
+                    syncResults.playersUpdated++;
+                  }
+                } catch (playerError) {
+                  console.error(`Error syncing player ${apiPlayerData.player_name}:`, playerError);
+                  syncResults.errors.push(
+                    `Player ${apiPlayerData.player_name}: ${playerError.message}`
+                  );
+                }
+              }
+            }
+          } catch (playersApiError) {
+            console.error(
+              `Error fetching players for team ${apiTeamData.team_name}:`,
+              playersApiError
+            );
+            syncResults.errors.push(
+              `Players for ${apiTeamData.team_name}: Failed to fetch from API`
+            );
+          }
+        } catch (teamError) {
+          console.error(`Error syncing team ${apiTeamData.team_name}:`, teamError);
+          syncResults.errors.push(`Team ${apiTeamData.team_name}: ${teamError.message}`);
         }
       }
 
-      res.status(201).json({
+      res.status(200).json({
         success: true,
-        message: 'Team and player synchronization completed',
-        totalTeams: response.data.length,
-        totalTeamsSynced,
-        totalPlayersSynced,
-        syncedAt: new Date(),
-        details: process.env.NODE_ENV === 'development' ? syncResults : undefined,
+        message: 'Teams and players synchronization completed',
+        data: syncResults,
       });
     } catch (error) {
       next(error);
@@ -359,4 +242,4 @@ class TeamController {
   }
 }
 
-module.exports = TeamController;
+module.exports = teamController;

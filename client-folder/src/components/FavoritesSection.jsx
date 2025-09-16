@@ -4,7 +4,7 @@ import { Link } from 'react-router';
 import { useAuth } from '../ui/AuthContext';
 
 export function FavoriteSection() {
-  const { isLoggedIn, favorites, login } = useAuth();
+  const { isLoggedIn, favorites } = useAuth();
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, amount: 0.3 });
 
@@ -42,14 +42,6 @@ export function FavoriteSection() {
     },
   };
 
-  // Simulasi login untuk demo
-  const handleDemoLogin = () => {
-    login({
-      name: 'Football Fan',
-      email: 'fan@football.com',
-      avatar: '⚽',
-    });
-  };
 
   const HeartSVG = () => (
     <motion.svg
@@ -247,24 +239,26 @@ export function FavoriteSection() {
               your personal collection today!
             </motion.p>
             <motion.div variants={itemVariants} className="flex items-center gap-4 justify-center">
-              <motion.button
-                onClick={handleDemoLogin}
-                className="px-8 py-4 rounded-2xl bg-[#FF6A3D] text-black font-semibold text-lg ring-1 ring-white/10 hover:brightness-110 active:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden group"
-                whileHover={{ y: -2 }}
-                whileTap={{ y: 0 }}
-              >
-                <span className="relative z-10">Login to Continue</span>
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out" />
-              </motion.button>
+              <Link to="/login">
+                <motion.div
+                  className="px-8 py-4 rounded-2xl bg-[#FF6A3D] text-black font-semibold text-lg ring-1 ring-white/10 hover:brightness-110 active:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden group cursor-pointer"
+                  whileHover={{ y: -2 }}
+                  whileTap={{ y: 0 }}
+                >
+                  <span className="relative z-10">Login to Continue</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out" />
+                </motion.div>
+              </Link>
 
-              <motion.div whileHover={{ y: -2 }} whileTap={{ y: 0 }}>
-                <Link
-                  to="/register"
-                  className="px-8 py-4 rounded-2xl bg-white/10 text-white font-semibold text-lg ring-1 ring-white/15 hover:bg-white/15 backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+              <Link to="/register">
+                <motion.div
+                  className="px-8 py-4 rounded-2xl bg-white/10 text-white font-semibold text-lg ring-1 ring-white/15 hover:bg-white/15 backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                  whileHover={{ y: -2 }}
+                  whileTap={{ y: 0 }}
                 >
                   Create Account
-                </Link>
-              </motion.div>
+                </motion.div>
+              </Link>
             </motion.div>
           </motion.div>
         ) : (
@@ -342,24 +336,26 @@ export function FavoriteSection() {
             </motion.div>
 
             <motion.div variants={itemVariants} className="flex items-center gap-4 justify-center">
-              <motion.div whileHover={{ y: -2 }} whileTap={{ y: 0 }}>
-                <Link
-                  to="/favorites"
-                  className="px-8 py-4 rounded-2xl bg-[#FF6A3D] text-black font-semibold text-lg ring-1 ring-white/10 hover:brightness-110 active:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden group"
+              <Link to="/favorites">
+                <motion.div
+                  className="px-8 py-4 rounded-2xl bg-[#FF6A3D] text-black font-semibold text-lg ring-1 ring-white/10 hover:brightness-110 active:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden group cursor-pointer"
+                  whileHover={{ y: -2 }}
+                  whileTap={{ y: 0 }}
                 >
                   <span className="relative z-10">View All Favorites</span>
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out" />
-                </Link>
-              </motion.div>
+                </motion.div>
+              </Link>
 
-              <motion.div whileHover={{ y: -2 }} whileTap={{ y: 0 }}>
-                <Link
-                  to="/clubs"
-                  className="px-8 py-4 rounded-2xl bg-white/10 text-white font-semibold text-lg ring-1 ring-white/15 hover:bg-white/15 backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+              <Link to="/clubs">
+                <motion.div
+                  className="px-8 py-4 rounded-2xl bg-white/10 text-white font-semibold text-lg ring-1 ring-white/15 hover:bg-white/15 backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                  whileHover={{ y: -2 }}
+                  whileTap={{ y: 0 }}
                 >
                   Explore More Teams
-                </Link>
-              </motion.div>
+                </motion.div>
+              </Link>
             </motion.div>
           </motion.div>
         )}
