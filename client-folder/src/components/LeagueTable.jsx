@@ -23,7 +23,6 @@ export default function LeagueTable({ leagueId }) {
       if (response.data.success) {
         const matches = response.data.data;
         const calculatedStandings = calculateStandings(matches);
-        console.log(matches, 'matches');
 
         setStandings(calculatedStandings);
       }
@@ -41,7 +40,7 @@ export default function LeagueTable({ leagueId }) {
     matches
       .filter(
         (match) =>
-          match.status === 'Finished' && match.home_score !== null && match.away_score !== null
+          match.status === 'finished' && match.home_score !== null && match.away_score !== null
       )
       .forEach((match) => {
         const homeTeam = match.HomeTeam;
@@ -116,7 +115,6 @@ export default function LeagueTable({ leagueId }) {
       })
       .map((team, index) => ({ ...team, position: index + 1 }));
   };
-
 
   const fade = {
     hidden: { opacity: 0, y: 8 },
@@ -213,9 +211,7 @@ export default function LeagueTable({ leagueId }) {
                   className="border-b border-white/10 hover:bg-white/5 transition-all duration-300"
                 >
                   <td className="p-4">
-                    <span className="font-bold text-lg text-white">
-                      {team.position}
-                    </span>
+                    <span className="font-bold text-lg text-white">{team.position}</span>
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-3">
@@ -261,7 +257,6 @@ export default function LeagueTable({ leagueId }) {
             </tbody>
           </table>
         </div>
-
       </div>
     </motion.div>
   );

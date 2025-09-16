@@ -3,8 +3,8 @@ const matchController = require('../controllers/matchController');
 
 // Keep only endpoints that client uses
 router.get('/league/:id', matchController.getMatchesByLeagueId);
+router.post('/sync/:leagueId', matchController.synchronizeMatchesByLeagueId);
 
 // Sync endpoints
-router.post('/sync/:leagueId', matchController.synchronizeMatchesByLeagueId);
 
 module.exports = router;

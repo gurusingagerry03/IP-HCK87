@@ -202,14 +202,14 @@ export default function LeagueDetail() {
   };
 
   const formatMatchScore = (match) => {
-    if (match.status === 'Finished' && match.home_score !== null && match.away_score !== null) {
+    if (match.status === 'finished' && match.home_score !== null && match.away_score !== null) {
       return `${match.home_score} - ${match.away_score}`;
     }
     return 'VS';
   };
 
   const getDisplayStatus = (status) => {
-    if (status === 'Finished') return 'FT';
+    if (status === 'finished') return 'FT';
     if (status === '' || status === null) return 'Upcoming';
     return status;
   };
@@ -427,7 +427,7 @@ export default function LeagueDetail() {
                         <option value="upcoming" className="bg-gray-800">
                           Upcoming
                         </option>
-                        <option value="Finished" className="bg-gray-800">
+                        <option value="finished" className="bg-gray-800">
                           Finished
                         </option>
                       </select>

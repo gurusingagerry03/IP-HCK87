@@ -7,20 +7,6 @@ class userController {
     try {
       const { fullname, email, password } = req.body;
 
-      if (!email?.trim()) {
-        return res.status(400).json({
-          success: false,
-          message: 'Email required',
-        });
-      }
-
-      if (!password?.trim()) {
-        return res.status(400).json({
-          success: false,
-          message: 'Password required',
-        });
-      }
-
       const hashedPassword = await hashPassword(password);
       const user = await User.create({
         fullname,

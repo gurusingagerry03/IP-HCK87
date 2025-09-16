@@ -17,7 +17,6 @@ class playerController {
         include: [
           {
             model: League,
-            attributes: ['id', 'name', 'country'],
           },
         ],
       });
@@ -34,16 +33,14 @@ class playerController {
         include: [
           {
             model: Team,
-            attributes: ['id', 'name', 'logoUrl', 'country'],
             include: [
               {
                 model: League,
-                attributes: ['id', 'name', 'country'],
               },
             ],
           },
         ],
-        order: [['name', 'ASC']],
+        order: [['fullName', 'ASC']],
       });
 
       return res.status(200).json({
@@ -51,6 +48,8 @@ class playerController {
         data: players,
       });
     } catch (error) {
+      console.log(error);
+
       next(error);
     }
   }

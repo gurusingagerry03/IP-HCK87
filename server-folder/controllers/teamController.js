@@ -101,13 +101,18 @@ class teamController {
       const { leagueId } = req.params;
 
       if (!leagueId) {
-        throw { name: 'BadRequest', message: 'League ID is required' };
+        return res.status(400).json({
+          success: false,
+          message: 'League ID is required',
+        });
       }
 
-      // Check if league exists
       const league = await League.findByPk(leagueId);
       if (!league) {
-        throw { name: 'NotFound', message: 'League not found' };
+        return res.status(404).json({
+          success: false,
+          message: 'League not found',
+        });
       }
 
       let teamsResponse;
@@ -119,122 +124,131 @@ class teamController {
           },
         });
       } catch (apiError) {
-        throw { name: 'BadRequest', message: 'Failed to connect to external team API' };
+        return res.status(400).json({
+          success: false,
+          message: 'Failed to connect to external team API',
+        });
       }
 
       if (!teamsResponse.data || !Array.isArray(teamsResponse.data)) {
-        throw { name: 'BadRequest', message: 'Invalid response from external API' };
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid response from external API',
+        });
       }
 
       const syncResults = {
-        teamsAdded: 0,
-        teamsUpdated: 0,
-        playersAdded: 0,
-        playersUpdated: 0,
+        totalTeam: 0,
+        totalPlayer: 0,
         errors: [],
       };
 
-      // Process each team
-      for (const apiTeamData of teamsResponse.data) {
-        try {
-          // Check if team exists
-          let team = await Team.findOne({
-            where: {
-              externalRef: apiTeamData.team_key,
-            },
+      try {
+        // DEDUPLICATION: Remove duplicate teams berdasarkan externalRef
+        const uniqueTeamsMap = new Map();
+        teamsResponse.data.forEach((apiTeamData) => {
+          if (!uniqueTeamsMap.has(apiTeamData.team_key)) {
+            uniqueTeamsMap.set(apiTeamData.team_key, apiTeamData);
+          }
+        });
+
+        // OPTIMASI: Bulk create/update teams dengan bulkCreate
+        const teamsData = Array.from(uniqueTeamsMap.values()).map((apiTeamData) => ({
+          leagueId: leagueId,
+          name: apiTeamData.team_name,
+          logoUrl: apiTeamData.team_badge || null,
+          foundedYear: apiTeamData.team_founded ? parseInt(apiTeamData.team_founded) : null,
+          country: apiTeamData.team_country || league.country,
+          stadiumName: apiTeamData.venue?.venue_name || null,
+          venueAddress: apiTeamData.venue?.venue_address || null,
+          stadiumCity: apiTeamData.venue?.venue_city || null,
+          stadiumCapacity: apiTeamData.venue?.venue_capacity
+            ? parseInt(apiTeamData.venue.venue_capacity)
+            : null,
+          coach: apiTeamData.coaches?.[0]?.coach_name || null,
+          externalRef: apiTeamData.team_key,
+          lastSyncedAt: new Date(),
+        }));
+
+        // Bulk create/update teams dengan field yang benar
+        const teamResults = await Team.bulkCreate(teamsData, {
+          updateOnDuplicate: [
+            'name',
+            'logoUrl',
+            'foundedYear',
+            'country',
+            'stadiumName',
+            'venueAddress',
+            'stadiumCity',
+            'stadiumCapacity',
+            'coach',
+            'lastSyncedAt',
+          ],
+          returning: true,
+        });
+
+        syncResults.totalTeam = teamResults.filter((result) => result._options.isNewRecord).length;
+
+        // OPTIMASI: Bulk create/update players dengan deduplication
+        const uniquePlayersMap = new Map();
+
+        // Use unique teams data instead of original response
+        for (const apiTeamData of Array.from(uniqueTeamsMap.values())) {
+          if (apiTeamData.players && Array.isArray(apiTeamData.players)) {
+            // Find team ID dari hasil bulk create
+            const team = teamResults.find((t) => t.externalRef === apiTeamData.team_key);
+
+            if (team) {
+              // DEDUPLICATION: Remove duplicate players berdasarkan externalRef
+              apiTeamData.players.forEach((apiPlayerData) => {
+                if (!uniquePlayersMap.has(apiPlayerData.player_id)) {
+                  uniquePlayersMap.set(apiPlayerData.player_id, {
+                    fullName: apiPlayerData.player_name,
+                    primaryPosition: apiPlayerData.player_type || null,
+                    thumbUrl: apiPlayerData.player_image || null,
+                    externalRef: apiPlayerData.player_id,
+                    age: apiPlayerData.player_age ? parseInt(apiPlayerData.player_age) : null,
+                    teamId: team.id,
+                    shirtNumber: apiPlayerData.player_number
+                      ? parseInt(apiPlayerData.player_number)
+                      : null,
+                  });
+                }
+              });
+            }
+          }
+        }
+
+        // Convert map to array untuk bulk create
+        const uniquePlayersData = Array.from(uniquePlayersMap.values());
+
+        if (uniquePlayersData.length > 0) {
+          // Bulk create/update players
+          const playerResults = await Player.bulkCreate(uniquePlayersData, {
+            updateOnDuplicate: [
+              'fullName',
+              'primaryPosition',
+              'thumbUrl',
+              'age',
+              'teamId',
+              'shirtNumber',
+            ],
+            returning: true,
           });
 
-          if (!team) {
-            // Create new team
-            team = await Team.create({
-              name: apiTeamData.team_name,
-              logoUrl: apiTeamData.team_logo || null,
-              country: apiTeamData.team_country || league.country,
-              foundedYear: apiTeamData.team_founded || null,
-              stadiumName: apiTeamData.venue_name || null,
-              leagueId: leagueId,
-              externalRef: apiTeamData.team_key,
-            });
-            syncResults.teamsAdded++;
-          } else {
-            // Update existing team
-            await team.update({
-              name: apiTeamData.team_name,
-              logoUrl: apiTeamData.team_logo || null,
-              country: apiTeamData.team_country || league.country,
-              foundedYear: apiTeamData.team_founded || null,
-              stadiumName: apiTeamData.venue_name || null,
-            });
-            syncResults.teamsUpdated++;
-          }
-
-          // Sync players for this team
-          let playersResponse;
-          try {
-            playersResponse = await http('/', {
-              params: {
-                action: 'get_players',
-                team_id: apiTeamData.team_key,
-              },
-            });
-
-            if (playersResponse.data && Array.isArray(playersResponse.data)) {
-              // Process each player
-              for (const apiPlayerData of playersResponse.data) {
-                try {
-                  let player = await Player.findOne({
-                    where: {
-                      externalRef: apiPlayerData.player_key,
-                    },
-                  });
-                  if (!player) {
-                    // Create new player
-                    await Player.create({
-                      fullName: apiPlayerData.player_name,
-                      primaryPosition: apiPlayerData.player_type || null,
-                      teamId: team.id,
-                      age: apiPlayerData.player_age || null,
-                      externalRef: apiPlayerData.player_key,
-                    });
-                    syncResults.playersAdded++;
-                  } else {
-                    // Update existing player
-                    await player.update({
-                      name: apiPlayerData.player_name,
-                      position: apiPlayerData.player_type || null,
-                      age: apiPlayerData.player_age || null,
-                      nationality: apiPlayerData.player_country || null,
-                      teamId: team.id,
-                    });
-                    syncResults.playersUpdated++;
-                  }
-                } catch (playerError) {
-                  console.error(`Error syncing player ${apiPlayerData.player_name}:`, playerError);
-                  syncResults.errors.push(
-                    `Player ${apiPlayerData.player_name}: ${playerError.message}`
-                  );
-                }
-              }
-            }
-          } catch (playersApiError) {
-            console.error(
-              `Error fetching players for team ${apiTeamData.team_name}:`,
-              playersApiError
-            );
-            syncResults.errors.push(
-              `Players for ${apiTeamData.team_name}: Failed to fetch from API`
-            );
-          }
-        } catch (teamError) {
-          console.error(`Error syncing team ${apiTeamData.team_name}:`, teamError);
-          syncResults.errors.push(`Team ${apiTeamData.team_name}: ${teamError.message}`);
+          syncResults.totalPlayer = playerResults.filter(
+            (result) => result._options.isNewRecord
+          ).length;
         }
+      } catch (bulkError) {
+        console.error('Bulk operation error:', bulkError);
+        syncResults.errors.push(`Bulk operation failed: ${bulkError.message}`);
       }
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
-        message: 'Teams and players synchronization completed',
         data: syncResults,
+        message: 'Teams and players synchronization completed',
       });
     } catch (error) {
       next(error);
