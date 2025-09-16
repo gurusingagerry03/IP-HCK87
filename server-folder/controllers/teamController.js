@@ -2,30 +2,7 @@ const { Team, League, Player } = require('../models');
 const { http } = require('../helpers/http');
 const { Op } = require('sequelize');
 const { BadRequestError, NotFoundError } = require('../helpers/customErrors');
-const { GoogleGenAI } = require('@google/genai');
-const ai = new GoogleGenAI({});
-
-async function descriptionGeneration(teamData) {
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: ` Generate a professional club information description for this football team. 
-      Keep it exactly 2-3 sentences, around 50-70 words maximum.
-      Include: team name, location, founding year, and brief history/characteristics.
-      DO NOT mention stadium name or capacity.
-      Make it sound professional and informative like a club profile.
-      
-      Team Details:
-      - Name: ${teamData.name}
-      - Country: ${teamData.country}  
-      - Founded: ${teamData.foundedYear}
-
-      - Coach: ${teamData.coach || 'N/A'}
-      
-      Example format: "[Team] is a professional football club based in [City], [Country]. Founded in [Year], the club has a rich history and continues to compete at the highest level of football."`,
-  });
-
-  return response.text;
-}
+const { generateAi } = require('../helpers/aiGenerate');
 
 class teamController {
   static async getAllTeams(req, res, next) {
@@ -264,9 +241,20 @@ class teamController {
       });
 
       for (const t of teamsNeedingDesc) {
-        const desc = await descriptionGeneration(t);
-        console.log(desc, '<<< description');
-
+        const prompt = ` Generate a professional club information description for this football team. 
+                Keep it exactly 2-3 sentences, around 50-70 words maximum.
+                Include: team name, location, founding year, and brief history/characteristics.
+                DO NOT mention stadium name or capacity.
+                Make it sound professional and informative like a club profile.
+                
+                Team Details:
+                - Name: ${t.name}
+                - Country: ${t.country}  
+                - Founded: ${t.foundedYear}
+                - Coach: ${t.coach || 'N/A'}
+                
+                Example format: "[Team] is a professional football club based in [City], [Country]. Founded in [Year], the club has a rich history and continues to compete at the highest level of football."`;
+        const desc = await generateAi(prompt, 'gemini-2.5-flash');
         await Team.update({ description: desc }, { where: { id: t.id, description: null } });
       }
 

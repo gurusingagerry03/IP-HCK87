@@ -40,6 +40,10 @@ module.exports = (sequelize, DataTypes) => {
       status: DataTypes.STRING,
       venue: DataTypes.STRING,
       externalRef: { type: DataTypes.STRING, allowNull: false, unique: true },
+      match_overview: DataTypes.TEXT,
+      tactical_analysis: DataTypes.TEXT,
+      match_preview: DataTypes.TEXT,
+      prediction: DataTypes.TEXT,
     },
     {
       sequelize,

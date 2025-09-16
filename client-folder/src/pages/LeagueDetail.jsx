@@ -549,7 +549,9 @@ export default function LeagueDetail() {
                             </div>
 
                             <div className="text-center md:text-right">
-                              <p className="text-white/70 text-sm mb-3">📍 {match.venue || 'TBD'}</p>
+                              <p className="text-white/70 text-sm mb-3">
+                                📍 {match.venue || 'TBD'}
+                              </p>
                               {match.status === 'finished' ? (
                                 <button
                                   onClick={() => navigate(`/matches/${match.id}/summary`)}
@@ -559,7 +561,7 @@ export default function LeagueDetail() {
                                 </button>
                               ) : (
                                 <button
-                                  onClick={() => console.log('Predict match:', match.id)}
+                                  onClick={() => navigate(`/matches/${match.id}/prediction`)}
                                   className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-sm font-medium rounded-xl hover:from-blue-500 hover:to-blue-400 transition-all duration-300 hover:scale-105"
                                 >
                                   🔮 Prediction

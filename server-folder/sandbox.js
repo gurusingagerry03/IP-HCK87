@@ -7,44 +7,24 @@ const ai = new GoogleGenAI({
 });
 
 async function main() {
-  const teamData = {
-    name: 'Real Madrid',
-    leagueId: 140,
-    foundedYear: 1902,
-    country: 'Spain',
-    stadiumName: 'Santiago Bernabéu',
-    stadiumCity: 'Madrid',
-    stadiumCapacity: 81044,
-    venueAddress: 'Av. de Concha Espina, 1, 28036 Madrid, Spain',
-    coach: 'Carlo Ancelotti',
-    lastSyncedAt: '2025-09-16 14:00:00',
-  };
+  const prompt = `
+    You are given accurate football match data. 
+    Your task is ONLY to generate two narrative fields: "match_overview" and "tactical_analysis". 
+    Do not invent statistics, referees, or numbers. Focus on natural sentences summarizing the match. 
+    Always respond in a valid JSON object with exactly these two fields.
 
-  const teamInfo = `
-  Team Name: ${teamData.name}
-  League: ${teamData.leagueId} 
-  Founded: ${teamData.foundedYear}
-  Country: ${teamData.country}
-  Coach: ${teamData.coach}
-  Last Synced: ${teamData.lastSyncedAt}
+    match: Vilaeal vs Real Oviedo
+    date: 2025-08-16
+
+    Output format (JSON only, no extra text):
+  {
+    "match_overview": "Write 2–3 sentences describing the general overview of the match.",
+    "tactical_analysis": "Write a detailed tactical analysis paragraph."
+  }
 `;
-
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash-lite',
-    contents: ` Generate a professional club information description for this football team. 
-      Keep it exactly 2-3 sentences, around 50-70 words maximum.
-      Include: team name, location, founding year, and brief history/characteristics.
-      DO NOT mention stadium name or capacity.
-      Make it sound professional and informative like a club profile.
-      
-      Team Details:
-      - Name: ${teamData.name}
-      - Country: ${teamData.country}  
-      - Founded: ${teamData.foundedYear}
-
-      - Coach: ${teamData.coach || 'N/A'}
-      
-      Example format: "[Team] is a professional football club based in [City], [Country]. Founded in [Year], the club has a rich history and continues to compete at the highest level of football."`,
+    contents: ` ${prompt}`,
   });
 
   console.log(response.text);

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
 import http from '../helpers/http';
 
-export default function MatchSummary() {
+export default function MatchPrediction() {
   const { matchId } = useParams();
   const navigate = useNavigate();
   const [match, setMatch] = useState(null);
@@ -15,31 +15,28 @@ export default function MatchSummary() {
   }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchMatch = async () => {
       if (!matchId) return;
 
       setLoading(true);
       setError(null);
 
       try {
-        await http.put(`/matches/analysis/${matchId}`);
-
         const response = await http.get(`/matches/${matchId}`);
         if (response.data.success) {
           setMatch(response.data.data);
-          console.log('✅ Match data loaded');
         } else {
           setError('Match not found');
         }
       } catch (err) {
-        console.error('Error:', err);
+        console.error('Error fetching match data:', err);
         setError('Failed to load match data');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    fetchMatch();
   }, [matchId]);
 
   const formatDateTime = (date, time) => {
@@ -53,7 +50,21 @@ export default function MatchSummary() {
     return { dateStr, time: time || '' };
   };
 
-  // Static summary data for demonstration
+  const formatMatchScore = (match) => {
+    if (match?.status === 'finished' && match.home_score !== null && match.away_score !== null) {
+      return `${match.home_score} - ${match.away_score}`;
+    }
+    return 'VS';
+  };
+
+  // Static prediction data for demonstration
+  const staticPrediction = {
+    match_preview:
+      'This upcoming fixture promises to be an exciting encounter between two competitive sides. Both teams have shown strong form recently and will be looking to secure crucial points in this important match.',
+    ai_prediction:
+      "Based on current form, head-to-head records, and team statistics, this match is expected to be closely contested. The home advantage could play a crucial role, while both teams possess the quality to create scoring opportunities. A tactical battle is anticipated with both managers likely to employ strategic approaches to gain the upper hand.",
+    predicted_score: { home: 2, away: 1 }
+  };
 
   if (loading) {
     return (
@@ -114,14 +125,7 @@ export default function MatchSummary() {
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 px-4 py-2 bg-[#111111]/70 hover:bg-[#111111]/60 border border-white/10 rounded-xl text-white transition-all duration-300"
         >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
           <span className="font-medium">Back</span>
@@ -139,11 +143,11 @@ export default function MatchSummary() {
           >
             <h1 className="text-4xl md:text-5xl font-extrabold leading-tight text-white mb-4">
               Match{' '}
-              <span className="bg-gradient-to-r from-green-500 via-green-400 to-emerald-500 bg-clip-text text-transparent">
-                Summary
+              <span className="bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-500 bg-clip-text text-transparent">
+                Prediction
               </span>
             </h1>
-            <p className="text-xl text-white/70">AI-Generated Match Analysis</p>
+            <p className="text-xl text-white/70">AI-Generated Match Forecast</p>
           </motion.div>
         </div>
       </div>
@@ -163,13 +167,13 @@ export default function MatchSummary() {
               {/* Teams vs Score Card */}
               <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 flex-1">
                 <div className="text-center mb-6">
-                  <h2 className="text-2xl font-bold text-white mb-2">Match Details</h2>
-                  <div className="inline-flex items-center px-4 py-2 rounded-xl bg-gradient-to-r from-green-600/20 to-green-500/20 border border-green-500/30">
-                    <span className="text-green-400 font-medium text-sm">FULL TIME</span>
+                  <h2 className="text-2xl font-bold text-white mb-2">Upcoming Match</h2>
+                  <div className="inline-flex items-center px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600/20 to-blue-500/20 border border-blue-500/30">
+                    <span className="text-blue-400 font-medium text-sm">UPCOMING</span>
                   </div>
                 </div>
 
-                {/* Teams and Score */}
+                {/* Teams and Predicted Score */}
                 <div className="space-y-6">
                   {/* Home Team */}
                   <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10">
@@ -192,7 +196,9 @@ export default function MatchSummary() {
                         <p className="text-white/60 text-sm">Home</p>
                       </div>
                     </div>
-                    <div className="text-3xl font-bold text-white">{match?.home_score ?? '-'}</div>
+                    <div className="text-3xl font-bold text-blue-400">
+                      {staticPrediction.predicted_score.home}
+                    </div>
                   </div>
 
                   {/* VS Divider */}
@@ -221,7 +227,9 @@ export default function MatchSummary() {
                         <p className="text-white/60 text-sm">Away</p>
                       </div>
                     </div>
-                    <div className="text-3xl font-bold text-white">{match?.away_score ?? '-'}</div>
+                    <div className="text-3xl font-bold text-blue-400">
+                      {staticPrediction.predicted_score.away}
+                    </div>
                   </div>
                 </div>
 
@@ -245,35 +253,34 @@ export default function MatchSummary() {
               </div>
             </motion.div>
 
-            {/* Right Column - AI Summary */}
+            {/* Right Column - AI Prediction */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.6 }}
               className="space-y-8 flex flex-col h-full"
             >
-              {/* Match Overview */}
+              {/* Match Preview */}
               <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 flex-1">
                 <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                  <span>📝</span>
-                  Match Overview
+                  <span>👁️</span>
+                  Match Preview
                 </h2>
-                <p className="text-white/80 leading-relaxed text-lg">
-                  {match?.match_overview || 'Generating Overview...'}
-                </p>
+                <p className="text-white/80 leading-relaxed text-lg">{staticPrediction.match_preview}</p>
               </div>
 
-              {/* Tactical Analysis */}
+              {/* AI Prediction */}
               <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 flex-1">
                 <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                  <span>🔍</span>
-                  Tactical Analysis
+                  <span>🤖</span>
+                  AI Prediction
                 </h2>
                 <p className="text-white/80 leading-relaxed text-lg">
-                  {match?.tactical_analysis || 'Generating Tactical Analysis...'}
+                  {staticPrediction.ai_prediction}
                 </p>
               </div>
             </motion.div>
+
           </div>
         </div>
       </div>

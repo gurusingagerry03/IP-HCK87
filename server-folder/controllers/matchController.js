@@ -2,8 +2,137 @@ const { Match, Team, League } = require('../models');
 const { http } = require('../helpers/http');
 const { Op } = require('sequelize');
 const { BadRequestError, NotFoundError } = require('../helpers/customErrors');
+const { generateAi } = require('../helpers/aiGenerate');
 
 class matchController {
+  //update match_preview and prediction
+  static async updateMatchPreviewAndPrediction(req, res, next) {
+    try {
+      const { id } = req.params;
+      let match_preview;
+      let prediction;
+      // const { match_preview, prediction } = req.body;
+
+      const match = await Match.findByPk(id, {
+        include: [
+          {
+            model: Team,
+            as: 'HomeTeam',
+            attributes: ['name'],
+          },
+          {
+            model: Team,
+            as: 'AwayTeam',
+            attributes: ['name'],
+          },
+          { model: League, attributes: ['name'] },
+        ],
+      });
+      if (!match) {
+        throw new NotFoundError('Match not found');
+      }
+
+      // jika match ada jangan generate ulang
+      if ((match.match_preview && match.prediction) || match.status === 'finished') {
+        return res.status(200).json({
+          mesage:
+            'Match preview and prediction already exists, no update made or match is finished',
+        });
+      }
+      const prompt = `
+          You are given accurate football match data. 
+          Your task is ONLY to generate two narrative fields: "match_preview" and "prediction". 
+          Do not invent statistics, referees, or numbers. Focus on natural sentences summarizing the match. 
+          Always respond in a valid JSON object with exactly these two fields.  
+          match: ${match.HomeTeam.name} vs ${match.AwayTeam.name}
+          date: ${match.match_date}
+          competition: ${match.League.name}
+          Output format (JSON only, no extra text):
+        {
+          "match_preview": "Write 2–3 sentences describing the general preview of the match.",
+          "prediction": "Write a detailed prediction paragraph."
+        }
+      `;
+      let response = await generateAi(prompt, 'gemini-2.5-flash-lite');
+      const clean = response.replace(/```json|```/g, '').trim();
+      const parsedResponse = JSON.parse(clean);
+      match_preview = parsedResponse.match_preview;
+      prediction = parsedResponse.prediction;
+
+      await Match.update({ match_preview, prediction }, { where: { id: id } });
+      return res.status(200).json({
+        mesage: 'Successfully updated match preview and prediction',
+      });
+    } catch (error) {
+      console.log(error);
+
+      next(error);
+    }
+  }
+  //update match_overview and tactical_analysis
+  static async updateMatchAnalysis(req, res, next) {
+    try {
+      const { id } = req.params;
+      let match_overview;
+      let tactical_analysis;
+      // const { match_overview, tactical_analysis } = req.body;
+
+      const match = await Match.findByPk(id, {
+        include: [
+          {
+            model: Team,
+            as: 'HomeTeam',
+            attributes: ['name'],
+          },
+          {
+            model: Team,
+            as: 'AwayTeam',
+            attributes: ['name'],
+          },
+          { model: League, attributes: ['name'] },
+        ],
+      });
+      if (!match) {
+        throw new NotFoundError('Match not found');
+      }
+      // jika match ada jangan generate ulang
+      if ((match.match_overview && match.tactical_analysis) || match.status === 'upcoming') {
+        return res.status(200).json({
+          mesage: 'Match analysis already exists, no update made or match is upcoming',
+        });
+      }
+      const prompt = `
+          You are given accurate football match data. 
+          Your task is ONLY to generate two narrative fields: "match_overview" and "tactical_analysis". 
+          Do not invent statistics, referees, or numbers. Focus on natural sentences summarizing the match. 
+          Always respond in a valid JSON object with exactly these two fields.
+
+          match: ${match.HomeTeam.name} vs ${match.AwayTeam.name}
+          date: ${match.match_date}
+          competition: ${match.League.name}
+
+          Output format (JSON only, no extra text):
+        {
+          "match_overview": "Write 2–3 sentences describing the general overview of the match.",
+          "tactical_analysis": "Write a detailed tactical analysis paragraph."
+        }
+      `;
+      let response = await generateAi(prompt, 'gemini-2.5-flash-lite');
+      const clean = response.replace(/```json|```/g, '').trim();
+      const parsedResponse = JSON.parse(clean);
+      match_overview = parsedResponse.match_overview;
+      tactical_analysis = parsedResponse.tactical_analysis;
+      await Match.update({ match_overview, tactical_analysis }, { where: { id: id } });
+      return res.status(200).json({
+        mesage: 'Successfully updated match analysis',
+      });
+    } catch (error) {
+      console.log(error);
+
+      next(error);
+    }
+  }
+
   static async getMatchesByLeagueId(req, res, next) {
     try {
       const { id } = req.params;
@@ -143,6 +272,42 @@ class matchController {
           hasNext,
           hasPrev,
         },
+      });
+    } catch (error) {
+      console.log(error);
+      next(error);
+    }
+  }
+
+  static async getMatchById(req, res, next) {
+    try {
+      const { id } = req.params;
+      const matchId = parseInt(id);
+      if (!matchId || isNaN(matchId)) {
+        throw new BadRequestError('Invalid Match ID');
+      }
+      const match = await Match.findByPk(matchId, {
+        include: [
+          {
+            model: Team,
+            as: 'HomeTeam',
+            attributes: ['id', 'name', 'logoUrl', 'country'],
+          },
+          {
+            model: Team,
+            as: 'AwayTeam',
+            attributes: ['id', 'name', 'logoUrl', 'country'],
+          },
+          { model: League },
+        ],
+      });
+      if (!match) {
+        throw new NotFoundError('Match not found');
+      }
+      return res.status(200).json({
+        success: true,
+        data: match,
+        message: `Successfully retrieved match with ID ${matchId}`,
       });
     } catch (error) {
       console.log(error);

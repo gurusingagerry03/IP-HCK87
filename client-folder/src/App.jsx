@@ -11,6 +11,7 @@ import Profile from './pages/Profile.jsx';
 import ClubDetail from './pages/ClubDetail.jsx';
 import LeagueDetail from './pages/LeagueDetail.jsx';
 import MatchSummary from './pages/MatchSummary.jsx';
+import MatchPrediction from './pages/MatchPrediction.jsx';
 import ApiTest from './components/ApiTest.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import { Route, Routes, Outlet } from 'react-router';
@@ -56,6 +57,7 @@ function MainRoute() {
       <Route path="/leagues/:id" element={<LeagueDetail />} />
       <Route path="/teams/:id" element={<ClubDetail />} />
       <Route path="/matches/:matchId/summary" element={<MatchSummary />} />
+      <Route path="/matches/:matchId/prediction" element={<MatchPrediction />} />
     </Routes>
   );
 }
