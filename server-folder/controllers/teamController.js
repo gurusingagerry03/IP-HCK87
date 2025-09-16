@@ -17,10 +17,12 @@ class TeamController {
       const { filter, q, page } = qs.parse(req.query);
 
       const filters = {
-        country: filter,
-        search: q,
-        page: page?.number || 1,
-        limit: page?.size || 9,
+        // Only add filters if they have values
+        country: filter || null,
+        search: q || null,
+        // Only add pagination if page is provided
+        page: page?.number || null,
+        limit: page?.size || null,
         includeModels: [
           {
             model: League,
@@ -39,6 +41,59 @@ class TeamController {
       });
     } catch (error) {
       console.error('Error in getAllTeamsWithFilters:', error);
+      next(error);
+    }
+  }
+
+  /**
+   * Get teams by league ID
+   * @route GET /api/teams/league/:leagueId
+   */
+  static async getTeamsByLeague(req, res, next) {
+    try {
+      const { leagueId } = req.params;
+      const { page } = qs.parse(req.query);
+
+      // Validate league ID
+      if (!leagueId || isNaN(leagueId)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Valid league ID is required',
+        });
+      }
+
+      // Check if league exists
+      const league = await League.findByPk(leagueId);
+      if (!league) {
+        return res.status(404).json({
+          success: false,
+          message: 'League not found',
+        });
+      }
+
+      const filters = {
+        leagueId: leagueId,
+        page: page?.number || 1,
+        limit: page?.size || 10,
+        includeModels: [
+          {
+            model: League,
+            attributes: ['name', 'country'],
+          },
+        ],
+      };
+
+      const result = await TeamService.getTeamsWithPagination(filters);
+
+      res.status(200).json({
+        success: true,
+        data: result.teams,
+        meta: result.pagination,
+        message: 'Teams retrieved successfully',
+        league: league.name,
+      });
+    } catch (error) {
+      console.error('Error in getTeamsByLeague:', error);
       next(error);
     }
   }

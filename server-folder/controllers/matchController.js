@@ -15,7 +15,7 @@ class MatchController {
    */
   static async getAllMatchesWithFilters(req, res, next) {
     try {
-      const { filter, q, page, date, status } = qs.parse(req.query);
+      const { page, status, date } = qs.parse(req.query);
       const { leagueId } = req.params; // Support for league-specific route
 
       // If leagueId is provided via params, validate it
@@ -36,13 +36,37 @@ class MatchController {
         }
       }
 
+      // Process date parameter
+      let processedDate = null;
+      if (date) {
+        // Handle URL encoded date (e.g., "09%2F14%2F2025" becomes "09/14/2025")
+        const decodedDate = decodeURIComponent(date);
+
+        // Try to parse different date formats
+        let parsedDate;
+        if (decodedDate.includes('/')) {
+          // Handle MM/DD/YYYY format
+          const [month, day, year] = decodedDate.split('/');
+          parsedDate = new Date(year, month - 1, day); // month is 0-indexed
+        } else if (decodedDate.includes('-')) {
+          // Handle YYYY-MM-DD format
+          parsedDate = new Date(decodedDate);
+        } else {
+          parsedDate = new Date(decodedDate);
+        }
+
+        if (!isNaN(parsedDate.getTime())) {
+          processedDate = parsedDate.toISOString().split('T')[0]; // Convert to YYYY-MM-DD
+        }
+      }
+
       const filters = {
-        leagueId: leagueId || filter?.league, // Use leagueId from params or query
-        status: filter?.status || status,
-        date: filter?.date || date,
-        search: q,
-        page: page?.number || 1,
-        limit: page?.size || 10,
+        leagueId: leagueId,
+        status: status,
+        date: processedDate,
+        // Only add pagination if page is provided
+        page: page?.number || null,
+        limit: page?.size || null,
         includeModels: [
           {
             model: require('../models').Team,

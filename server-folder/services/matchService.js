@@ -12,9 +12,16 @@ class MatchService {
    */
   static async getMatchesWithPagination(filters) {
     try {
-      const { leagueId, status, date, search, page = 1, limit = 10, includeModels = [] } = filters;
+      const {
+        leagueId,
+        status,
+        date,
+        search,
+        page = null,
+        limit = null,
+        includeModels = [],
+      } = filters;
 
-      const offset = (page - 1) * limit;
       const whereConditions = {};
 
       // Apply filters
@@ -27,7 +34,21 @@ class MatchService {
       }
 
       if (date) {
-        whereConditions.match_date = date;
+        // Convert date string to proper format for database comparison
+        // Handle various date formats (YYYY-MM-DD, MM/DD/YYYY, etc.)
+        const parsedDate = new Date(date);
+        if (!isNaN(parsedDate.getTime())) {
+          // Create date range for the entire day
+          const startOfDay = new Date(parsedDate);
+          startOfDay.setHours(0, 0, 0, 0);
+
+          const endOfDay = new Date(parsedDate);
+          endOfDay.setHours(23, 59, 59, 999);
+
+          whereConditions.match_date = {
+            [Op.between]: [startOfDay, endOfDay],
+          };
+        }
       }
 
       if (search) {
@@ -39,10 +60,14 @@ class MatchService {
 
       const options = {
         where: whereConditions,
-        limit: parseInt(limit),
-        offset,
         order: [['match_date', 'DESC']],
       };
+
+      // Only add pagination if page and limit are provided
+      if (page && limit) {
+        options.limit = parseInt(limit);
+        options.offset = (parseInt(page) - 1) * parseInt(limit);
+      }
 
       if (includeModels.length > 0) {
         options.include = includeModels;
@@ -50,28 +75,42 @@ class MatchService {
 
       const { count, rows } = await Match.findAndCountAll(options);
 
-      return {
-        matches: rows,
-        pagination: {
+      // Build pagination metadata
+      let paginationMeta = null;
+      if (page && limit) {
+        const totalPages = Math.ceil(count / parseInt(limit));
+        paginationMeta = {
           currentPage: parseInt(page),
-          totalPages: Math.ceil(count / limit),
+          totalPages: totalPages,
           totalItems: count,
           itemsPerPage: parseInt(limit),
-          hasNext: page < Math.ceil(count / limit),
-          hasPrev: page > 1,
-        },
+          hasNext: parseInt(page) < totalPages,
+          hasPrev: parseInt(page) > 1,
+        };
+      } else {
+        // No pagination - return simple meta
+        paginationMeta = {
+          totalItems: count,
+        };
+      }
+
+      return {
+        matches: rows,
+        pagination: paginationMeta,
       };
     } catch (error) {
       console.error('Error in getMatchesWithPagination:', error);
       throw error;
     }
   }
+
   /**
    * Synchronize match data from external API to database
    * @param {Object} matchData - Match data from external API
    * @param {Object} options - Additional options (league, homeTeam, awayTeam)
    * @returns {Promise<Object>} Match synchronization result
    */
+
   static async synchronizeMatchFromAPI(matchData, options) {
     try {
       const { league, homeTeam, awayTeam } = options;
@@ -88,7 +127,7 @@ class MatchService {
         match_time: matchData.match_time || null,
         home_score: matchData.match_hometeam_ft_score || null,
         away_score: matchData.match_awayteam_ft_score || null,
-        status: matchData.match_status || '',
+        status: matchData.match_status || 'upcoming',
         venue: homeTeam.stadiumName || null,
         externalRef: matchData.match_id,
       });

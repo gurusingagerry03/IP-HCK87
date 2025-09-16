@@ -1,38 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router';
+import { useParams, useNavigate, useSearchParams } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
-
-// Mock data - in real app this would come from API
-const mockLeague = {
-  id: 1,
-  name: 'Premier League',
-  country: 'England',
-  logoUrl: 'https://logos-world.net/wp-content/uploads/2020/06/Premier-League-Logo.png',
-  currentSeason: '2024/25',
-  description: 'The Premier League is the top level of the English football league system.',
-};
-
-const mockMatches = Array.from({ length: 100 }, (_, i) => ({
-  id: i + 1,
-  date: new Date(2024, 8, 15 + Math.floor(i / 2)).toISOString().split('T')[0],
-  time: ['15:00', '17:30', '20:00'][i % 3],
-  status: ['finished', 'upcoming'][i % 2],
-  homeTeam: {
-    name: ['Manchester United', 'Arsenal', 'Chelsea', 'Liverpool', 'Manchester City'][i % 5],
-    logo: '🔴',
-  },
-  awayTeam: {
-    name: ['Tottenham', 'Brighton', 'Newcastle', 'Aston Villa', 'West Ham'][i % 5],
-    logo: '⚪',
-  },
-  venue: ['Old Trafford', 'Emirates Stadium', 'Stamford Bridge', 'Anfield', 'Etihad Stadium'][
-    i % 5
-  ],
-  score:
-    i % 2 === 0
-      ? { home: Math.floor(Math.random() * 4), away: Math.floor(Math.random() * 4) }
-      : null,
-}));
+import http from '../helpers/http';
+import LeagueTable from '../components/LeagueTable';
 
 export default function LeagueDetail() {
   const { id } = useParams();
@@ -44,16 +14,27 @@ export default function LeagueDetail() {
   const [isHeaderSticky, setIsHeaderSticky] = useState(false);
   const [isTabsSticky, setIsTabsSticky] = useState(false);
 
-  // Filters
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedDate, setSelectedDate] = useState('');
+  // Search params for filtering and pagination
+  const [searchParams, setSearchParams] = useSearchParams({
+    status: 'all',
+    date: '',
+    pageNumber: 1,
+    pageSize: 10,
+  });
+
+  const obj = Object.fromEntries(searchParams.entries());
 
   // Match data
   const [matches, setMatches] = useState([]);
-  const [filteredMatches, setFilteredMatches] = useState([]);
   const [matchesLoading, setMatchesLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [page, setPage] = useState(1);
+  const [matchMeta, setMatchMeta] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    itemsPerPage: 10,
+    hasNext: false,
+    hasPrev: false,
+  });
 
   const headerRef = useRef(null);
   const tabsRef = useRef(null);
@@ -64,23 +45,90 @@ export default function LeagueDetail() {
     show: { opacity: 1, y: 0, transition: { duration: 0.25 } },
   };
 
-  // Simulate API calls
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  // Fetch league data and initial matches
   useEffect(() => {
     const fetchLeague = async () => {
+      if (!id) return;
+
       setLoading(true);
+      setError(null);
+
       try {
-        await new Promise((resolve) => setTimeout(resolve, 800));
-        setLeague(mockLeague);
-        setMatches(mockMatches);
+        // Fetch league data
+        const leagueResponse = await http.get(`/leagues/${id}`);
+        if (leagueResponse.data.success) {
+          setLeague(leagueResponse.data.data);
+        }
       } catch (err) {
+        console.error('Error fetching league data:', err);
         setError('Failed to load league data');
       } finally {
         setLoading(false);
       }
     };
 
-    if (id) fetchLeague();
+    fetchLeague();
   }, [id]);
+
+  // Fetch matches when search params change
+  useEffect(() => {
+    if (!id) return;
+    fetchMatches();
+  }, [id, searchParams]);
+
+  // Fetch matches with filters and pagination
+  const fetchMatches = async () => {
+    setMatchesLoading(true);
+
+    try {
+      const status = searchParams.get('status');
+      const date = searchParams.get('date');
+      const pageNumber = searchParams.get('pageNumber');
+      const pageSize = searchParams.get('pageSize');
+
+      const params = {};
+
+      // Add pagination
+      if (pageSize) params['page[size]'] = pageSize;
+      if (pageNumber) params['page[number]'] = pageNumber;
+
+      // Add filters
+      if (status && status !== 'all') {
+        params['status'] = status;
+      }
+
+      if (date) {
+        // Send date in MM/DD/YYYY format to server
+        // Server will handle the conversion
+        params['date'] = date;
+      }
+
+      const response = await http.get(`/matches/league/${id}`, { params });
+
+      if (response.data.success) {
+        setMatches(response.data.data);
+        setMatchMeta(response.data.meta);
+      }
+    } catch (err) {
+      console.error('Error fetching matches:', err);
+      setMatches([]);
+      setMatchMeta({
+        currentPage: 1,
+        totalPages: 1,
+        totalItems: 0,
+        itemsPerPage: 10,
+        hasNext: false,
+        hasPrev: false,
+      });
+    } finally {
+      setMatchesLoading(false);
+    }
+  };
 
   // Handle scroll for sticky elements
   useEffect(() => {
@@ -98,53 +146,72 @@ export default function LeagueDetail() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Filter matches with debounce
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      let filtered = matches;
-      if (selectedStatus !== 'all') filtered = filtered.filter((m) => m.status === selectedStatus);
-      if (selectedDate) filtered = filtered.filter((m) => m.date === selectedDate);
-      setFilteredMatches(filtered.slice(0, page * 20));
-      setHasMore(filtered.length > page * 20);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [matches, selectedStatus, selectedDate, page]);
+  // Pagination helper functions
+  const currentPage = matchMeta.currentPage || 1;
+  const totalPages = matchMeta.totalPages || 1;
 
-  const loadMore = useCallback(() => {
-    if (!hasMore || matchesLoading) return;
-    setPage((prev) => prev + 1);
-  }, [hasMore, matchesLoading]);
+  const getPaginationRange = () => {
+    const maxVisible = 5;
+    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  };
 
-  // Infinite scroll
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 1000) {
-        loadMore();
-      }
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [loadMore]);
+  const handlePageChange = (page) => {
+    const next = Math.max(1, Math.min(page, totalPages));
+    setSearchParams({ ...obj, pageNumber: next });
+  };
 
+  // Date format helper functions
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return '';
+    // Convert YYYY-MM-DD to MM/DD/YYYY for input
+    const [year, month, day] = dateString.split('-');
+    return `${month}/${day}/${year}`;
+  };
+
+  const formatDateFromInput = (inputDate) => {
+    if (!inputDate) return '';
+    // Keep MM/DD/YYYY format for URL params
+    return inputDate;
+  };
+
+  // Updated formatDateTime function to show year and time separately
   const formatDateTime = (date, time) => {
     const d = new Date(date);
     const dateStr = d.toLocaleDateString('en-GB', {
       weekday: 'short',
       day: 'numeric',
       month: 'short',
+      year: 'numeric', // Added year
     });
-    return `${dateStr} ${time}`;
+    return { dateStr, time: time || '' };
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'finished':
         return 'bg-gray-600 text-gray-200';
+      case '':
       case 'upcoming':
         return 'bg-blue-600 text-white';
       default:
         return 'bg-gray-600 text-gray-200';
     }
+  };
+
+  const formatMatchScore = (match) => {
+    if (match.status === 'Finished' && match.home_score !== null && match.away_score !== null) {
+      return `${match.home_score} - ${match.away_score}`;
+    }
+    return 'VS';
+  };
+
+  const getDisplayStatus = (status) => {
+    if (status === 'Finished') return 'FT';
+    if (status === '' || status === null) return 'Upcoming';
+    return status;
   };
 
   // ---- Loading / Error ----
@@ -215,7 +282,7 @@ export default function LeagueDetail() {
       {/* Back Button bar */}
       <div className="p-4 bg-[#111111] top-0 z-50">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/')}
           className="flex items-center gap-2 px-4 py-2 bg-[#111111]/70 hover:bg-[#111111]/60 border border-white/10 rounded-xl text-white transition-all duration-300"
         >
           <svg
@@ -265,9 +332,7 @@ export default function LeagueDetail() {
               <div className="flex items-center gap-4">
                 <span className="text-lg text-white/70">📍 {league?.country}</span>
                 <div className="px-3 py-1 rounded-full bg-gradient-to-r from-accent/20 to-orange-500/20 border border-accent/30">
-                  <span className="text-accent font-medium text-sm">
-                    Season {league?.currentSeason}
-                  </span>
+                  <span className="text-accent font-medium text-sm">Season 2025/26</span>
                 </div>
               </div>
             </div>
@@ -324,16 +389,36 @@ export default function LeagueDetail() {
                       </label>
                       <input
                         type="date"
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
+                        value={
+                          searchParams.get('date')
+                            ? (() => {
+                                // Convert MM/DD/YYYY to YYYY-MM-DD for date input
+                                const dateStr = searchParams.get('date');
+                                const [month, day, year] = dateStr.split('/');
+                                return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                              })()
+                            : ''
+                        }
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            // Convert YYYY-MM-DD to MM/DD/YYYY for URL params
+                            const [year, month, day] = e.target.value.split('-');
+                            const formattedDate = `${month}/${day}/${year}`;
+                            setSearchParams({ ...obj, date: formattedDate, pageNumber: 1 });
+                          } else {
+                            setSearchParams({ ...obj, date: '', pageNumber: 1 });
+                          }
+                        }}
                         className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-accent text-sm"
                       />
                     </div>
                     <div>
                       <label className="block text-white/70 text-sm font-medium mb-2">Status</label>
                       <select
-                        value={selectedStatus}
-                        onChange={(e) => setSelectedStatus(e.target.value)}
+                        value={searchParams.get('status') ?? 'all'}
+                        onChange={(e) =>
+                          setSearchParams({ ...obj, status: e.target.value, pageNumber: 1 })
+                        }
                         className="w-full appearance-none bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-accent cursor-pointer text-sm"
                       >
                         <option value="all" className="bg-gray-800">
@@ -342,20 +427,19 @@ export default function LeagueDetail() {
                         <option value="upcoming" className="bg-gray-800">
                           Upcoming
                         </option>
-                        <option value="finished" className="bg-gray-800">
+                        <option value="Finished" className="bg-gray-800">
                           Finished
                         </option>
                       </select>
                     </div>
                   </div>
 
-                  {(selectedDate || selectedStatus !== 'all') && (
+                  {(searchParams.get('date') || searchParams.get('status') !== 'all') && (
                     <div className="mt-4 pt-4 border-t border-white/10">
                       <button
-                        onClick={() => {
-                          setSelectedDate('');
-                          setSelectedStatus('all');
-                        }}
+                        onClick={() =>
+                          setSearchParams({ status: 'all', date: '', pageNumber: 1, pageSize: 10 })
+                        }
                         className="text-accent hover:text-orange-400 text-sm font-medium transition-colors duration-200"
                       >
                         Clear all filters
@@ -365,111 +449,112 @@ export default function LeagueDetail() {
                 </motion.div>
 
                 {/* Results Info */}
-                <div className="mb-6">
-                  <p className="text-white/60">
-                    Showing{' '}
-                    <span className="text-accent font-semibold">{filteredMatches.length}</span>{' '}
+                <div className="mb-6 flex items-center justify-between">
+                  <div className="text-white/60">
+                    Showing <span className="text-accent font-semibold">{matches.length}</span> of{' '}
+                    <span className="text-accent font-semibold">{matchMeta.totalItems}</span>{' '}
                     matches
-                    {selectedStatus !== 'all' && (
+                    {searchParams.get('status') !== 'all' && (
                       <span>
                         {' '}
-                        - <span className="text-white capitalize">{selectedStatus}</span>
-                      </span>
-                    )}
-                    {selectedDate && (
-                      <span>
-                        {' '}
-                        on{' '}
-                        <span className="text-white">
-                          {new Date(selectedDate).toLocaleDateString()}
+                        -{' '}
+                        <span className="text-white capitalize">
+                          {searchParams.get('status') === 'upcoming'
+                            ? 'Upcoming'
+                            : searchParams.get('status')}
                         </span>
                       </span>
                     )}
-                  </p>
+                    {searchParams.get('date') && (
+                      <span>
+                        {' '}
+                        on <span className="text-white">{searchParams.get('date')}</span>
+                      </span>
+                    )}
+                  </div>
+                  {totalPages > 1 && (
+                    <div className="text-white/40 text-sm">
+                      Page {currentPage} of {totalPages}
+                    </div>
+                  )}
                 </div>
 
                 {/* Matches List */}
-                {filteredMatches.length > 0 ? (
+                {matches.length > 0 ? (
                   <div className="space-y-4">
-                    {filteredMatches.map((match) => (
-                      <div
-                        key={match.id}
-                        className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300 group"
-                      >
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                            <div>
-                              <p className="text-white font-medium">
-                                {formatDateTime(match.date, match.time)}
-                              </p>
-                              <p className="text-white/50 text-sm">WIB</p>
-                            </div>
-                            <span
-                              className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                                match.status
-                              )} w-fit`}
-                            >
-                              {match.status === 'finished' ? 'FT' : 'Upcoming'}
-                            </span>
-                          </div>
-
-                          <div className="md:col-span-2">
-                            <div className="flex items-center justify-center gap-4">
-                              <div className="flex items-center gap-3 flex-1 justify-end">
-                                <span className="text-white font-medium text-right">
-                                  {match.homeTeam.name}
-                                </span>
-                                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm">
-                                  {match.homeTeam.logo}
-                                </div>
+                    {matches.map((match) => {
+                      const { dateStr, time } = formatDateTime(match.match_date, match.match_time);
+                      return (
+                        <div
+                          key={match.id}
+                          className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300 group"
+                        >
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                              <div>
+                                <p className="text-white font-medium">{dateStr}</p>
+                                {time && <p className="text-white/50 text-sm">{time} WIB</p>}
                               </div>
+                              <span
+                                className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                                  match.status
+                                )} w-fit`}
+                              >
+                                {getDisplayStatus(match.status)}
+                              </span>
+                            </div>
 
-                              <div className="px-4 py-2 bg-white/10 rounded-lg min-w-[60px] text-center">
-                                {match.score ? (
-                                  <span className="text-white font-bold">
-                                    {match.score.home} - {match.score.away}
+                            <div className="md:col-span-2">
+                              <div className="flex items-center justify-center gap-4">
+                                <div className="flex items-center gap-3 flex-1 justify-end">
+                                  <span className="text-white font-medium text-right">
+                                    {match.HomeTeam?.name || 'TBD'}
                                   </span>
-                                ) : (
-                                  <span className="text-white/50">VS</span>
-                                )}
-                              </div>
-
-                              <div className="flex items-center gap-3 flex-1">
-                                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm">
-                                  {match.awayTeam.logo}
+                                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm overflow-hidden">
+                                    {match.HomeTeam?.logoUrl ? (
+                                      <img
+                                        src={match.HomeTeam.logoUrl}
+                                        alt={match.HomeTeam.name}
+                                        className="w-6 h-6 object-contain"
+                                      />
+                                    ) : (
+                                      '🏠'
+                                    )}
+                                  </div>
                                 </div>
-                                <span className="text-white font-medium">
-                                  {match.awayTeam.name}
-                                </span>
+
+                                <div className="px-4 py-2 bg-white/10 rounded-lg min-w-[60px] text-center">
+                                  <span className="text-white font-bold">
+                                    {formatMatchScore(match)}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-3 flex-1">
+                                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm overflow-hidden">
+                                    {match.AwayTeam?.logoUrl ? (
+                                      <img
+                                        src={match.AwayTeam.logoUrl}
+                                        alt={match.AwayTeam.name}
+                                        className="w-6 h-6 object-contain"
+                                      />
+                                    ) : (
+                                      '⚽'
+                                    )}
+                                  </div>
+                                  <span className="text-white font-medium">
+                                    {match.AwayTeam?.name || 'TBD'}
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                          </div>
 
-                          <div className="text-center md:text-right">
-                            <p className="text-white/70 text-sm">📍 {match.venue}</p>
+                            <div className="text-center md:text-right">
+                              <p className="text-white/70 text-sm">📍 {match.venue || 'TBD'}</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-
-                    {hasMore && (
-                      <div className="text-center py-8">
-                        <button
-                          onClick={loadMore}
-                          disabled={matchesLoading}
-                          className="px-6 py-3 bg-white/10 border border-white/20 rounded-2xl text-white hover:bg-white/20 transition-all duration-300 disabled:opacity-50"
-                        >
-                          {matchesLoading ? (
-                            <div className="flex items-center gap-2">
-                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                              Loading...
-                            </div>
-                          ) : (
-                            'Load More'
-                          )}
-                        </button>
-                      </div>
-                    )}
+                      );
+                    })}
                   </div>
                 ) : (
                   <motion.div
@@ -484,30 +569,86 @@ export default function LeagueDetail() {
                       No matches match your current filters. Try adjusting the criteria above.
                     </p>
                     <button
-                      onClick={() => {
-                        setSelectedStatus('all');
-                        setSelectedDate('');
-                      }}
+                      onClick={() =>
+                        setSearchParams({ status: 'all', date: '', pageNumber: 1, pageSize: 10 })
+                      }
                       className="px-6 py-3 bg-gradient-to-r from-accent to-orange-500 text-white font-semibold rounded-2xl hover:from-orange-500 hover:to-accent transition-all duration-300"
                     >
                       Clear All Filters
                     </button>
                   </motion.div>
                 )}
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="mt-12 flex justify-center">
+                    <div className="flex items-center gap-2 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4">
+                      <button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={!matchMeta.hasPrev}
+                        className="px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/20 transition-all duration-300"
+                      >
+                        Previous
+                      </button>
+
+                      <div className="flex items-center gap-2">
+                        {currentPage > 3 && totalPages > 5 && (
+                          <>
+                            <button
+                              onClick={() => handlePageChange(1)}
+                              className="w-12 h-12 rounded-xl font-semibold bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-all duration-300"
+                            >
+                              1
+                            </button>
+                            {currentPage > 4 && <span className="text-white/40 px-2">...</span>}
+                          </>
+                        )}
+
+                        {getPaginationRange().map((page) => (
+                          <button
+                            key={page}
+                            onClick={() => handlePageChange(page)}
+                            className={`w-12 h-12 rounded-xl font-semibold transition-all duration-300 ${
+                              currentPage === page
+                                ? 'bg-gradient-to-r from-accent to-orange-500 text-white'
+                                : 'bg-white/10 border border-white/20 text-white hover:bg-white/20'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        ))}
+
+                        {currentPage < totalPages - 2 && totalPages > 5 && (
+                          <>
+                            {currentPage < totalPages - 3 && (
+                              <span className="text-white/40 px-2">...</span>
+                            )}
+                            <button
+                              onClick={() => handlePageChange(totalPages)}
+                              className="w-12 h-12 rounded-xl font-semibold bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-all duration-300"
+                            >
+                              {totalPages}
+                            </button>
+                          </>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={!matchMeta.hasNext}
+                        className="px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/20 transition-all duration-300"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
               </motion.div>
             )}
 
             {activeTab === 'table' && (
-              <motion.div
-                key="table"
-                variants={fade}
-                initial="hidden"
-                animate="show"
-                className="text-center py-20"
-              >
-                <div className="text-6xl mb-4">📊</div>
-                <h3 className="text-white text-2xl font-bold mb-4">League Table</h3>
-                <p className="text-white/60">League table feature coming soon...</p>
+              <motion.div key="table" variants={fade} initial="hidden" animate="show">
+                <LeagueTable leagueId={id} />
               </motion.div>
             )}
           </AnimatePresence>

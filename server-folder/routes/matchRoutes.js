@@ -7,7 +7,7 @@ const router = express.Router();
  * Base path: /api/matches
  */
 
-// GET /api/matches/league/:leagueId - Get matches by league ID (uses same controller method)
+// GET /api/matches/league/:leagueId - Get matches by league ID
 router.get('/league/:leagueId', MatchController.getAllMatchesWithFilters);
 
 // POST /api/matches/sync/:leagueId - Synchronize matches from external API

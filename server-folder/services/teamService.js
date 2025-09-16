@@ -83,20 +83,28 @@ class TeamService {
    */
   static async getTeamsWithPagination(filters) {
     try {
-      const { country, search, page = 1, limit = 9, includeModels = [] } = filters;
+      const { country, search, leagueId, page = null, limit = null, includeModels = [] } = filters;
 
       const queryOptions = {
         where: {},
         order: [['name', 'ASC']],
-        limit: Math.min(parseInt(limit), 50),
-        offset: (parseInt(page) - 1) * Math.min(parseInt(limit), 50),
       };
 
-      if (country) {
+      // Only add pagination if page is provided
+      if (page && limit) {
+        queryOptions.limit = Math.min(parseInt(limit), 50);
+        queryOptions.offset = (parseInt(page) - 1) * Math.min(parseInt(limit), 50);
+      }
+
+      if (leagueId) {
+        queryOptions.where.leagueId = leagueId;
+      }
+
+      if (country && country.trim() !== '') {
         queryOptions.where.country = country;
       }
 
-      if (search) {
+      if (search && search.trim() !== '') {
         queryOptions.where.name = { [require('sequelize').Op.iLike]: `%${search}%` };
       }
 
@@ -106,18 +114,27 @@ class TeamService {
 
       const result = await Team.findAndCountAll(queryOptions);
 
-      const totalPages = Math.ceil(result.count / queryOptions.limit);
+      // Build pagination metadata
+      let paginationMeta = null;
+      if (page && limit) {
+        const totalPages = Math.ceil(result.count / queryOptions.limit);
+        paginationMeta = {
+          page: parseInt(page),
+          totalPages: totalPages,
+          total: result.count,
+          hasNext: parseInt(page) < totalPages,
+          hasPrev: parseInt(page) > 1,
+        };
+      } else {
+        // No pagination - return simple meta
+        paginationMeta = {
+          total: result.count,
+        };
+      }
 
       return {
         teams: result.rows,
-        pagination: {
-          page: parseInt(page),
-          limit: queryOptions.limit,
-          total: result.count,
-          totalPages,
-          hasNext: parseInt(page) < totalPages,
-          hasPrev: parseInt(page) > 1,
-        },
+        pagination: paginationMeta,
       };
     } catch (error) {
       console.error('Error getting teams with pagination:', error);

@@ -10,6 +10,9 @@ const router = express.Router();
 // GET /api/teams - Get teams with filtering and pagination
 router.get('/', TeamController.getAllTeamsWithFilters);
 
+// GET /api/teams/league/:leagueId - Get teams by league ID
+router.get('/league/:leagueId', TeamController.getTeamsByLeague);
+
 // GET /api/teams/:id - Get team by ID with details
 router.get('/:id', TeamController.getTeamById);
 
