@@ -1,9 +1,71 @@
 const { Match } = require('../models');
+const { Op } = require('sequelize');
 
 /**
  * Match Service - Handles match-related business logic
  */
 class MatchService {
+  /**
+   * Get matches with pagination and filters
+   * @param {Object} filters - Filter options
+   * @returns {Promise<Object>} Paginated matches with metadata
+   */
+  static async getMatchesWithPagination(filters) {
+    try {
+      const { leagueId, status, date, search, page = 1, limit = 10, includeModels = [] } = filters;
+
+      const offset = (page - 1) * limit;
+      const whereConditions = {};
+
+      // Apply filters
+      if (leagueId) {
+        whereConditions.league_id = leagueId;
+      }
+
+      if (status) {
+        whereConditions.status = status;
+      }
+
+      if (date) {
+        whereConditions.match_date = date;
+      }
+
+      if (search) {
+        whereConditions[Op.or] = [
+          { venue: { [Op.iLike]: `%${search}%` } },
+          { status: { [Op.iLike]: `%${search}%` } },
+        ];
+      }
+
+      const options = {
+        where: whereConditions,
+        limit: parseInt(limit),
+        offset,
+        order: [['match_date', 'DESC']],
+      };
+
+      if (includeModels.length > 0) {
+        options.include = includeModels;
+      }
+
+      const { count, rows } = await Match.findAndCountAll(options);
+
+      return {
+        matches: rows,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(count / limit),
+          totalItems: count,
+          itemsPerPage: parseInt(limit),
+          hasNext: page < Math.ceil(count / limit),
+          hasPrev: page > 1,
+        },
+      };
+    } catch (error) {
+      console.error('Error in getMatchesWithPagination:', error);
+      throw error;
+    }
+  }
   /**
    * Synchronize match data from external API to database
    * @param {Object} matchData - Match data from external API
