@@ -34,7 +34,13 @@ export default function Login() {
         localStorage.setItem('access_token', response.data.data.access_token);
         localStorage.setItem('user_data', JSON.stringify(response.data.data.user));
         toast.success('Login successful! Welcome back.');
-        navigate('/');
+
+        // Redirect admin to admin panel, regular users to home
+        if (response.data.data.user.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/');
+        }
       }
     } catch (error) {
       // Handle multiple errors dari server
@@ -66,7 +72,13 @@ export default function Login() {
       localStorage.setItem('access_token', response.data.data.access_token);
       localStorage.setItem('user_data', JSON.stringify(response.data.data.user));
       toast.success('Successfully logged in with Google!');
-      navigate('/');
+
+      // Redirect admin to admin panel, regular users to home
+      if (response.data.data.user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     } catch (error) {
       const errorMessage =
         error.response?.data?.message || 'Google login failed. Please try again.';

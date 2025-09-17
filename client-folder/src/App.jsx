@@ -17,13 +17,29 @@ import { Route, Routes, Outlet, Navigate } from 'react-router';
 import { BrowserRouter } from 'react-router';
 import { Provider } from 'react-redux';
 import { store } from './store/index.js';
+import { getAuthStatus, isAdmin } from './helpers/auth.js';
 
 // Protected Route Component untuk halaman yang memerlukan auth
 function ProtectedRoute({ children }) {
-  const isLoggedIn = localStorage.getItem('access_token');
+  const { isLoggedIn } = getAuthStatus();
 
   if (!isLoggedIn) {
     return <Navigate to="/login" />;
+  }
+
+  return children;
+}
+
+// Admin Protected Route Component untuk halaman yang hanya bisa diakses admin
+function AdminProtectedRoute({ children }) {
+  const { isLoggedIn, user } = getAuthStatus();
+
+  if (!isLoggedIn) {
+    return <Navigate to="/login" />;
+  }
+
+  if (user?.role !== 'admin') {
+    return <Navigate to="/" />;
   }
 
   return children;
@@ -82,7 +98,14 @@ function MainRoute() {
           }
         />
       </Route>
-      <Route path="/admin" element={<Admin />} />
+      <Route
+        path="/admin"
+        element={
+          <AdminProtectedRoute>
+            <Admin />
+          </AdminProtectedRoute>
+        }
+      />
       <Route path="/leagues/:id" element={<LeagueDetail />} />
       <Route path="/teams/:id" element={<ClubDetail />} />
       <Route path="/matches/:matchId/summary" element={<MatchSummary />} />

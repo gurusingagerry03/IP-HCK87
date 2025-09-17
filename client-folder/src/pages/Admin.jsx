@@ -52,11 +52,13 @@ export default function Admin() {
 
         // Count completed and upcoming matches based on status from database
         const completedMatches = matchesData.filter(
-          (match) => match.status === 'finished' || match.status === 'completed' || match.status === 'FT'
+          (match) =>
+            match.status === 'finished' || match.status === 'completed' || match.status === 'FT'
         ).length;
 
         const upcomingMatches = matchesData.filter(
-          (match) => match.status === 'scheduled' || match.status === 'upcoming' || match.status === 'NS'
+          (match) =>
+            match.status === 'scheduled' || match.status === 'upcoming' || match.status === 'NS'
         ).length;
 
         // Calculate stats
@@ -91,9 +93,11 @@ export default function Admin() {
 
     try {
       setCreateStatus('creating');
-      await http.post('/leagues/sync', {
-        leagueName: leagueName.trim(),
-        leagueCountry: country.trim(),
+      await http({
+        method: 'POST',
+        url: '/leagues/sync',
+        data: { leagueName: leagueName.trim(), leagueCountry: country.trim() },
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
       });
 
       setCreateStatus('success');
@@ -124,7 +128,11 @@ export default function Admin() {
       setTeamPlayerSyncStatus('syncing');
       const selectedLeague = leagues.find((league) => league.id == selectedLeagueForTeams);
 
-      await http.post(`/teams/sync/${selectedLeagueForTeams}`);
+      await http({
+        method: 'POST',
+        url: `/teams/sync/${selectedLeagueForTeams}`,
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+      });
 
       setTeamPlayerSyncStatus('success');
       toast.success(
@@ -151,7 +159,11 @@ export default function Admin() {
       setMatchSyncStatus('syncing');
       const selectedLeague = leagues.find((league) => league.id == selectedLeagueForMatches);
 
-      await http.post(`/matches/sync/${selectedLeagueForMatches}`);
+      await http({
+        method: 'POST',
+        url: `/matches/sync/${selectedLeagueForMatches}`,
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+      });
 
       setMatchSyncStatus('success');
       toast.success(

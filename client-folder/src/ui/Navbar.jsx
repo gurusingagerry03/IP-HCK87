@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router';
+import { getAuthStatus, logout } from '../helpers/auth.js';
 
 const links = [
   { to: '/', label: 'Home' },
@@ -29,24 +30,9 @@ export default function Navbar() {
   // Check authentication status
   useEffect(() => {
     const checkAuth = () => {
-      const token = localStorage.getItem('access_token');
-      const userData = localStorage.getItem('user_data');
-
-      if (token && userData) {
-        try {
-          const parsedUser = JSON.parse(userData);
-          setUser(parsedUser);
-          setIsLoggedIn(true);
-        } catch (error) {
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('user_data');
-          setUser(null);
-          setIsLoggedIn(false);
-        }
-      } else {
-        setUser(null);
-        setIsLoggedIn(false);
-      }
+      const { isLoggedIn: loggedIn, user: userData } = getAuthStatus();
+      setIsLoggedIn(loggedIn);
+      setUser(userData);
     };
 
     checkAuth();
@@ -64,9 +50,8 @@ export default function Navbar() {
   };
 
   const handleLogout = () => {
-    // Clear localStorage
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user_data');
+    // Clear authentication
+    logout();
 
     // Clear state
     setUser(null);
@@ -130,6 +115,8 @@ export default function Navbar() {
                   )}
                 </NavLink>
               ))}
+
+              {/* Admin Panel Link - Only for Admin Users */}
             </div>
 
             {/* User Menu & Mobile Toggle */}
@@ -176,6 +163,16 @@ export default function Navbar() {
                           <span>👤</span>
                           <span>Profile</span>
                         </NavLink>
+                        {user?.role === 'admin' && (
+                          <NavLink
+                            to="/admin"
+                            onClick={onNavigate}
+                            className="flex items-center gap-3 px-3 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                          >
+                            <span>⚙️</span>
+                            <span>Admin Panel</span>
+                          </NavLink>
+                        )}
                         <button
                           onClick={handleLogout}
                           className="w-full flex items-center gap-3 px-3 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
@@ -241,6 +238,8 @@ export default function Navbar() {
                 </NavLink>
               ))}
 
+              {/* Admin Panel Link - Mobile - Only for Admin Users */}
+
               <div className="px-4 pt-2">
                 {isLoggedIn ? (
                   <div className="space-y-3">
@@ -261,6 +260,16 @@ export default function Navbar() {
                       <span>👤</span>
                       <span className="font-semibold">Profile</span>
                     </NavLink>
+                    {user?.role === 'admin' && (
+                      <NavLink
+                        to="/admin"
+                        onClick={onNavigate}
+                        className="flex items-center gap-3 px-4 py-3 rounded-2xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200"
+                      >
+                        <span>⚙️</span>
+                        <span className="font-semibold">Admin Panel</span>
+                      </NavLink>
+                    )}
                     <button
                       onClick={handleLogout}
                       className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200"
