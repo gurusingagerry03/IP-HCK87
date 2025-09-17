@@ -1,8 +1,10 @@
+import { clubReducer } from './clubSlice';
 import { leagueReducer } from './leagueSlice';
-const { configureStore } = require('@reduxjs/toolkit');
+import { configureStore } from '@reduxjs/toolkit';
 
 export const store = configureStore({
   reducer: {
     leagues: leagueReducer,
+    clubs: clubReducer,
   },
 });

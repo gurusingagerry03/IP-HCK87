@@ -157,8 +157,6 @@ export default function LeagueTable({ leagueId }) {
     );
   }
 
-  console.log(standings, 'standings');
-
   if (standings.length === 0) {
     return (
       <motion.div

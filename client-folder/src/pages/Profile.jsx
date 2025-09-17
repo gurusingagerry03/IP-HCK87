@@ -1,24 +1,42 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useAuth } from '../ui/AuthContext';
 import { useNavigate } from 'react-router';
-import http from '../helpers/http';
 
 export default function Profile() {
-  const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [user, setUser] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [formData, setFormData] = useState({
-    fullname: user?.fullname || '',
-    email: user?.email || ''
+    fullname: '',
+    email: '',
   });
+
+  // Load user data from localStorage
+  useEffect(() => {
+    const userData = localStorage.getItem('user_data');
+    if (userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+        setFormData({
+          fullname: parsedUser.fullname || '',
+          email: parsedUser.email || '',
+        });
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        navigate('/login');
+      }
+    } else {
+      navigate('/login');
+    }
+  }, [navigate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
     if (error) setError(null);
     if (success) setSuccess(null);
   };
@@ -30,9 +48,14 @@ export default function Profile() {
     setSuccess(null);
 
     try {
-      // Note: You'll need to implement a user update endpoint on the server
-      // For now, just show success message
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Simulate API delay
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Update user data in localStorage
+      const updatedUser = { ...user, ...formData };
+      localStorage.setItem('user_data', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+
       setSuccess('Profile updated successfully!');
       setIsEditing(false);
     } catch (error) {
@@ -45,7 +68,7 @@ export default function Profile() {
   const handleCancel = () => {
     setFormData({
       fullname: user?.fullname || '',
-      email: user?.email || ''
+      email: user?.email || '',
     });
     setIsEditing(false);
     setError(null);
@@ -54,19 +77,14 @@ export default function Profile() {
 
   const fade = {
     hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+    show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
   };
 
   return (
     <div className="min-h-screen py-16 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
-        <motion.div
-          variants={fade}
-          initial="hidden"
-          animate="show"
-          className="text-center mb-8"
-        >
+        <motion.div variants={fade} initial="hidden" animate="show" className="text-center mb-8">
           <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-r from-accent to-orange-500 flex items-center justify-center">
             <span className="text-3xl font-bold text-white">
               {user?.fullname?.charAt(0)?.toUpperCase() || '👤'}
@@ -109,9 +127,7 @@ export default function Profile() {
           <form onSubmit={handleSave} className="space-y-6">
             {/* Full Name */}
             <div>
-              <label className="block text-white/70 text-sm font-medium mb-2">
-                Full Name
-              </label>
+              <label className="block text-white/70 text-sm font-medium mb-2">Full Name</label>
               <input
                 type="text"
                 name="fullname"
@@ -128,9 +144,7 @@ export default function Profile() {
 
             {/* Email */}
             <div>
-              <label className="block text-white/70 text-sm font-medium mb-2">
-                Email Address
-              </label>
+              <label className="block text-white/70 text-sm font-medium mb-2">Email Address</label>
               <input
                 type="email"
                 name="email"
@@ -159,9 +173,7 @@ export default function Profile() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-white/70 text-sm font-medium mb-2">
-                    Account ID
-                  </label>
+                  <label className="block text-white/70 text-sm font-medium mb-2">Account ID</label>
                   <div className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl">
                     <p className="text-white">#{user?.id || 'N/A'}</p>
                   </div>
@@ -227,8 +239,9 @@ export default function Profile() {
             <button
               onClick={() => {
                 if (confirm('Are you sure you want to logout?')) {
-                  logout();
-                  navigate('/');
+                  localStorage.removeItem('access_token');
+                  localStorage.removeItem('user_data');
+                  navigate('/login');
                 }
               }}
               className="px-6 py-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl hover:bg-red-500/20 hover:border-red-500/50 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"

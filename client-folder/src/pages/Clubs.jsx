@@ -3,13 +3,12 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router';
 import http from '../helpers/http';
 import { useSearchParams } from 'react-router';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchClub } from '../store/clubSlice';
 
 export default function Clubs() {
-  const [teams, setTeams] = useState([]);
   const [allTeams, setAllTeams] = useState([]);
   const [favorites, setFavorites] = useState([]);
-  const [meta, setMeta] = useState({});
-  const [loading, setLoading] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams({
     q: '',
     filter: '',
@@ -17,6 +16,27 @@ export default function Clubs() {
     pageNumber: 1,
     pageSize: 9,
   });
+
+  const { teams, loading, error, meta } = useSelector((state) => state.clubs);
+
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    const q = searchParams.get('q');
+    const filter = searchParams.get('filter');
+    const sort = searchParams.get('sort');
+    const pageNumber = searchParams.get('pageNumber');
+    const pageSize = searchParams.get('pageSize');
+
+    const params = {};
+    if (q) params.q = q;
+    if (filter) params.filter = filter;
+    if (sort) params.sort = sort;
+    if (pageSize) params['page[size]'] = pageSize;
+    if (pageNumber) params['page[number]'] = pageNumber;
+
+    dispatch(fetchClub(params));
+  }, [searchParams]);
 
   const obj = Object.fromEntries(searchParams.entries());
   const searchRef = useRef(null);
@@ -38,39 +58,6 @@ export default function Clubs() {
       console.error('Error loading favorites from localStorage:', error);
     }
   }, []);
-
-  useEffect(() => {
-    const fetchTeams = async () => {
-      setLoading(true);
-      try {
-        const q = searchParams.get('q');
-        const filter = searchParams.get('filter');
-        const sort = searchParams.get('sort');
-        const pageNumber = searchParams.get('pageNumber');
-        const pageSize = searchParams.get('pageSize');
-
-        const params = {};
-        if (q) params.q = q;
-        if (filter) params.filter = filter;
-        if (sort) params.sort = sort;
-        if (pageSize) params['page[size]'] = pageSize;
-        if (pageNumber) params['page[number]'] = pageNumber;
-
-        const response = await http.get('/teams', { params });
-        setTeams(response.data.data || []);
-        setMeta(response.data.meta || {});
-      } catch (error) {
-        console.error('Error fetching teams:', error);
-        // Set empty data on error
-        setTeams([]);
-        setMeta({});
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTeams();
-  }, [searchParams]);
 
   useEffect(() => {
     const fetchAllTeams = async () => {

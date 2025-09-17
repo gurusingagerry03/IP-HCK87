@@ -1,8 +1,22 @@
 const errorHandling = (err, req, res, next) => {
   switch (err.name) {
     case 'SequelizeUniqueConstraintError':
+      res.status(400).json({
+        message: 'Validation error',
+        errors: err.errors.map((error) => ({
+          field: error.path,
+          message: error.message,
+        })),
+      });
+      break;
     case 'SequelizeValidationError':
-      res.status(400).json({ message: err.errors[0].message });
+      res.status(400).json({
+        message: 'Validation error',
+        errors: err.errors.map((error) => ({
+          field: error.path,
+          message: error.message,
+        })),
+      });
       break;
     case 'JsonWebTokenError':
       res.status(401).json({ message: 'invalid token' });

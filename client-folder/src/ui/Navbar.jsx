@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router';
-import { useAuth } from './AuthContext';
+import { NavLink, useLocation, useNavigate } from 'react-router';
 
 const links = [
   { to: '/', label: 'Home' },
@@ -22,8 +21,37 @@ const slideInLeftKeyframes = `
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [user, setUser] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const location = useLocation();
-  const { user, isLoggedIn, logout } = useAuth();
+  const navigate = useNavigate();
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = localStorage.getItem('access_token');
+      const userData = localStorage.getItem('user_data');
+
+      if (token && userData) {
+        try {
+          const parsedUser = JSON.parse(userData);
+          setUser(parsedUser);
+          setIsLoggedIn(true);
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user_data');
+          setUser(null);
+          setIsLoggedIn(false);
+        }
+      } else {
+        setUser(null);
+        setIsLoggedIn(false);
+      }
+    };
+
+    checkAuth();
+  }, [location.pathname]); // Re-check when location changes
 
   // Langsung ke atas (tanpa smooth) setiap route berubah
   useEffect(() => {
@@ -37,8 +65,17 @@ export default function Navbar() {
   };
 
   const handleLogout = () => {
-    logout();
+    // Clear localStorage
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user_data');
+
+    // Clear state
+    setUser(null);
+    setIsLoggedIn(false);
     setShowUserMenu(false);
+
+    // Navigate to login page
+    navigate('/login');
     window.scrollTo(0, 0);
   };
 

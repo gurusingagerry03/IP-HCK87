@@ -1,25 +1,19 @@
 import { motion, useInView } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import http from '../helpers/http';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchLeague } from '../store/leagueSlice';
 
 export function FeaturedLeaguesSection() {
-  const [leagues, setLeagues] = useState([]);
+  const { leagues } = useSelector((state) => state.leagues);
+
+  const dispatch = useDispatch();
+  useEffect(() => {
+    dispatch(fetchLeague());
+  }, []);
+
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, amount: 0.2 });
-
-  const getLeagues = async () => {
-    try {
-      const response = await http.get('/leagues');
-      setLeagues(response.data.data || response.data || []);
-    } catch (error) {
-      console.error('Error fetching leagues:', error);
-    }
-  };
-
-  useEffect(() => {
-    getLeagues();
-  }, []);
 
   const containerVariants = {
     hidden: { opacity: 0 },

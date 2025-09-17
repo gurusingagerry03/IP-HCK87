@@ -1,14 +1,34 @@
 import { motion, useInView } from 'framer-motion';
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router';
-import { useAuth } from '../ui/AuthContext';
 
 export function FavoriteSection() {
-  const { isLoggedIn, favorites } = useAuth();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [favorites, setFavorites] = useState([]);
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, amount: 0.3 });
 
-  // Animation variants yang konsisten dengan HomeSection
+  // Check authentication and load favorites
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = localStorage.getItem('access_token');
+      setIsLoggedIn(!!token);
+
+      if (token) {
+        try {
+          const savedFavorites = localStorage.getItem('footballFavorites');
+          if (savedFavorites) {
+            setFavorites(JSON.parse(savedFavorites));
+          }
+        } catch (error) {
+          console.error('Error loading favorites:', error);
+        }
+      }
+    };
+
+    checkAuth();
+  }, []);
+
   const containerVariants = {
     hidden: { opacity: 0, y: 50 },
     show: {
@@ -41,7 +61,6 @@ export function FavoriteSection() {
       transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
     },
   };
-
 
   const HeartSVG = () => (
     <motion.svg

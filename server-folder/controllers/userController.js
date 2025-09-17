@@ -8,11 +8,15 @@ class userController {
     try {
       const { fullname, email, password } = req.body;
 
-      const hashedPassword = await hashPassword(password);
       const user = await User.create({
         fullname,
         email,
-        password: hashedPassword,
+        password,
+      });
+
+      const access_token = generateToken({
+        id: user.id,
+        email: user.email,
       });
 
       return res.status(201).json({
@@ -32,22 +36,26 @@ class userController {
     try {
       const { email, password } = req.body;
 
-      if (!email) {
-        throw new BadRequestError('Email required');
-      }
-
-      if (!password) {
-        throw new BadRequestError('Password required');
+      if (!email || !password) {
+        throw new BadRequestError('Email and password are required');
       }
 
       const user = await User.findOne({ where: { email } });
       if (!user) {
-        throw new UnauthorizedError('Invalid email or password');
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication failed',
+          errors: [{ field: 'general', message: 'Invalid email or password' }],
+        });
       }
 
       const isPasswordValid = await comparePasswords(password, user.password);
       if (!isPasswordValid) {
-        throw new UnauthorizedError('Invalid email or password');
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication failed',
+          errors: [{ field: 'general', message: 'Invalid email or password' }],
+        });
       }
 
       const access_token = generateToken({
@@ -57,7 +65,14 @@ class userController {
 
       return res.status(200).json({
         success: true,
-        data: { access_token },
+        data: {
+          access_token,
+          user: {
+            id: user.id,
+            email: user.email,
+            fullname: user.fullname,
+          },
+        },
       });
     } catch (error) {
       next(error);

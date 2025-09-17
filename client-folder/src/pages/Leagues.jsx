@@ -1,27 +1,16 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router';
-import http from '../helpers/http';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchLeague } from '../store/leagueSlice';
 
 export default function Leagues() {
-  const [leagues, setLeagues] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const { leagues, loading } = useSelector((state) => state.leagues);
+
+  const dispatch = useDispatch();
 
   useEffect(() => {
-    const fetchLeagues = async () => {
-      setLoading(true);
-      try {
-        const response = await http.get('/leagues');
-        setLeagues(response.data.data || []);
-      } catch (error) {
-        console.error('Error fetching leagues:', error);
-        setLeagues([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchLeagues();
+    dispatch(fetchLeague());
   }, []);
 
   const leagueStats = [

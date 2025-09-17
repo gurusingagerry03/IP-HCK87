@@ -23,7 +23,6 @@ export default function MatchSummary() {
 
       try {
         await http.put(`/matches/analysis/${matchId}`);
-
         const response = await http.get(`/matches/${matchId}`);
         if (response.data.success) {
           setMatch(response.data.data);
