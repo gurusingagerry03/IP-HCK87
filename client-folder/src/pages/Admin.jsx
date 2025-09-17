@@ -36,47 +36,28 @@ export default function Admin() {
         const leaguesData = leaguesResponse.data.data || leaguesResponse.data || [];
         setLeagues(leaguesData);
 
-        // Fetch teams
+        // Fetch teams (get all teams without query parameters)
         const teamsResponse = await http.get('/teams');
         const teamsData = teamsResponse.data.data || teamsResponse.data || [];
 
         // Fetch players count (loop through teams to get total players)
-        let totalPlayers = 0;
-        for (const team of teamsData) {
-          try {
-            const playersResponse = await http.get(`/players/team/${team.id}`);
-            const playersData = playersResponse.data.data || playersResponse.data || [];
-            totalPlayers += playersData.length;
-          } catch (error) {
-            console.error(`Failed to fetch players for team ${team.id}:`, error);
-          }
-        }
+        const playersResponse = await http.get('/players');
+        let totalPlayers = playersResponse.data.data.length || playersResponse.data.length || 0;
 
-        // Fetch matches count (loop through leagues to get total matches)
-        let totalMatches = 0;
-        let completedMatches = 0;
-        let upcomingMatches = 0;
+        // Fetch matches data (get all matches from new endpoint)
+        const matchesResponse = await http.get('/matches');
+        const matchesData = matchesResponse.data.data || matchesResponse.data || [];
 
-        for (const league of leaguesData) {
-          try {
-            const matchesResponse = await http.get(`/matches/league/${league.id}`);
-            const matchesData = matchesResponse.data.data || matchesResponse.data || [];
-            totalMatches += matchesData.length;
+        const totalMatches = matchesData.length;
 
-            // Count completed and upcoming matches (adjust status field as needed)
-            const completed = matchesData.filter(
-              (match) => match.status === 'completed' || match.status === 'FT'
-            ).length;
-            const upcoming = matchesData.filter(
-              (match) => match.status === 'scheduled' || match.status === 'upcoming'
-            ).length;
+        // Count completed and upcoming matches based on status from database
+        const completedMatches = matchesData.filter(
+          (match) => match.status === 'finished' || match.status === 'completed' || match.status === 'FT'
+        ).length;
 
-            completedMatches += completed;
-            upcomingMatches += upcoming;
-          } catch (error) {
-            console.error(`Failed to fetch matches for league ${league.id}:`, error);
-          }
-        }
+        const upcomingMatches = matchesData.filter(
+          (match) => match.status === 'scheduled' || match.status === 'upcoming' || match.status === 'NS'
+        ).length;
 
         // Calculate stats
         const totalLeagues = leaguesData.length;
@@ -216,7 +197,7 @@ export default function Admin() {
             <span>Logout</span>
           </button>
 
-          <h1 className="text-4xl font-bold text-slate-800 mb-2">Admin Panel</h1>
+          <h1 className="text-4xl font-bold text-slate-800 mb-2">Ninety Minutes - Admin Panel</h1>
           <p className="text-slate-600">Content Management System</p>
         </motion.div>
 
@@ -337,7 +318,11 @@ export default function Admin() {
                   {[
                     { action: 'Ready to create leagues', time: '--', status: 'pending' },
                     { action: 'Database connection established', time: '--', status: 'success' },
-                    { action: 'Admin panel initialized', time: '--', status: 'success' },
+                    {
+                      action: 'Ninety Minutes admin panel initialized',
+                      time: '--',
+                      status: 'success',
+                    },
                   ].map((activity, index) => (
                     <motion.div
                       key={index}

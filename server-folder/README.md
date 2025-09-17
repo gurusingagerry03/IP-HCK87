@@ -1,4 +1,4 @@
-# Football League API
+# Ninety Minutes API
 
 A RESTful API for managing football league data, including leagues, teams, players, and matches.
 

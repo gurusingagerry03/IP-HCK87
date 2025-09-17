@@ -33,13 +33,11 @@ class teamController {
         };
       }
 
-      const limit = Math.min(parseInt(pageSize), 50);
-      const offset = (parseInt(pageNumber) - 1) * limit;
+      // Check if there are any query parameters for pagination or filtering
+      const hasQueryParams = search || country || req.query['page[number]'] || req.query['page[size]'];
 
-      const { count, rows } = await Team.findAndCountAll({
+      let findOptions = {
         where: whereCondition,
-        limit: limit,
-        offset: offset,
         order: [[sort, 'ASC']],
         include: [
           {
@@ -47,19 +45,45 @@ class teamController {
             attributes: ['id', 'name', 'country'],
           },
         ],
-      });
+      };
 
-      const totalPages = Math.ceil(count / limit);
-      const currentPage = parseInt(pageNumber);
+      let totalPages = 1;
+      let currentPage = 1;
+
+      // Only apply pagination if there are query parameters
+      if (hasQueryParams) {
+        const limit = Math.min(parseInt(pageSize), 50);
+        const offset = (parseInt(pageNumber) - 1) * limit;
+        findOptions.limit = limit;
+        findOptions.offset = offset;
+
+        const { count, rows } = await Team.findAndCountAll(findOptions);
+        totalPages = Math.ceil(count / limit);
+        currentPage = parseInt(pageNumber);
+
+        return res.status(200).json({
+          data: rows,
+          meta: {
+            page: currentPage,
+            totalPages: totalPages,
+            total: count,
+            hasNext: currentPage < totalPages,
+            hasPrev: currentPage > 1,
+          },
+        });
+      }
+
+      // If no query parameters, return all data without pagination
+      const { count, rows } = await Team.findAndCountAll(findOptions);
 
       res.status(200).json({
         data: rows,
         meta: {
-          page: currentPage,
-          totalPages: totalPages,
+          page: 1,
+          totalPages: 1,
           total: count,
-          hasNext: currentPage < totalPages,
-          hasPrev: currentPage > 1,
+          hasNext: false,
+          hasPrev: false,
         },
       });
     } catch (error) {

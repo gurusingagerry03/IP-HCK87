@@ -37,7 +37,7 @@ app.get('/health', (req, res) => {
 app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Football League API',
+    message: 'Ninety Minutes API',
     version: '1.0.0',
     documentation: {
       baseUrl: '/api/v1',
@@ -82,7 +82,7 @@ app.use(errorHandling);
 
 // Graceful shutdown handling
 const server = app.listen(port, () => {
-  console.log(`🚀 Football League API server running on port ${port}`);
+  console.log(`🚀 Ninety Minutes API server running on port ${port}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Health check: http://localhost:${port}/health`);
   console.log(`📡 API base URL: http://localhost:${port}/api/v1`);

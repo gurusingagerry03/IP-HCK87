@@ -33,11 +33,12 @@ class userController {
       return res.status(200).json({
         success: true,
         data: {
-          access_token: generateToken({ id: user.id }),
+          access_token: generateToken({ id: user.id, role: user.role }),
           user: {
             id: user.id,
             email: user.email,
             fullname: user.fullname,
+            role: user.role,
           },
         },
       });
@@ -62,6 +63,7 @@ class userController {
           id: user.id,
           email: user.email,
           fullname: user.fullname,
+          role: user.role,
         },
       });
     } catch (error) {
@@ -98,6 +100,7 @@ class userController {
       const access_token = generateToken({
         id: user.id,
         email: user.email,
+        role: user.role,
       });
 
       return res.status(200).json({
@@ -108,6 +111,7 @@ class userController {
             id: user.id,
             email: user.email,
             fullname: user.fullname,
+            role: user.role,
           },
         },
       });

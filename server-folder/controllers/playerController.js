@@ -2,6 +2,20 @@ const { Player, Team, League } = require('../models');
 const { BadRequestError, NotFoundError } = require('../helpers/customErrors');
 
 class playerController {
+  static async getAllPlayers(req, res, next) {
+    try {
+      const players = await Player.findAll({});
+
+      return res.status(200).json({
+        success: true,
+        data: players,
+      });
+    } catch (error) {
+      console.log(error);
+      next(error);
+    }
+  }
+
   static async getPlayersByTeamId(req, res, next) {
     try {
       const { id } = req.params;

@@ -183,9 +183,34 @@ class matchController {
         try {
           // Convert MM/DD/YYYY to YYYY-MM-DD for database comparison
           const [month, day, year] = date.split('/');
-          const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-          whereClause.match_date = formattedDate;
+
+          if (
+            !month ||
+            !day ||
+            !year ||
+            isNaN(parseInt(month)) ||
+            isNaN(parseInt(day)) ||
+            isNaN(parseInt(year))
+          ) {
+            throw new BadRequestError('Invalid date format. Expected MM/DD/YYYY');
+          }
+
+          const formattedDate = `${year}-${parseInt(month).toString().padStart(2, '0')}-${parseInt(
+            day
+          )
+            .toString()
+            .padStart(2, '0')}`;
+
+          // Create date range considering timezone (+07:00)
+          // Since DB stores dates with +07:00 offset, we need to account for local timezone
+          const startOfDay = new Date(formattedDate + 'T00:00:00.000+07:00');
+          const endOfDay = new Date(formattedDate + 'T23:59:59.999+07:00');
+
+          whereClause.match_date = {
+            [Op.between]: [startOfDay, endOfDay],
+          };
         } catch (dateError) {
+          console.error('Date parsing error:', dateError);
           throw new BadRequestError('Invalid date format. Expected MM/DD/YYYY');
         }
       }
@@ -437,6 +462,90 @@ class matchController {
         message: `Successfully synchronized ${
           syncResults.matchesAdded + syncResults.matchesUpdated
         } matches`,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getAllMatches(req, res, next) {
+    try {
+      const { status, 'page[number]': pageNumber, 'page[size]': pageSize } = req.query;
+
+      // Check if there are any query parameters for pagination or filtering
+      const hasQueryParams = status || req.query['page[number]'] || req.query['page[size]'];
+
+      let whereCondition = {};
+
+      if (status?.trim()) {
+        whereCondition.status = {
+          [Op.iLike]: `%${status.trim()}%`,
+        };
+      }
+
+      let findOptions = {
+        where: whereCondition,
+        order: [['match_date', 'ASC']],
+        include: [
+          {
+            model: Team,
+            as: 'HomeTeam',
+            attributes: ['id', 'name', 'logoUrl'],
+          },
+          {
+            model: Team,
+            as: 'AwayTeam',
+            attributes: ['id', 'name', 'logoUrl'],
+          },
+          {
+            model: League,
+            attributes: ['id', 'name'],
+          },
+        ],
+      };
+
+      let totalPages = 1;
+      let currentPage = 1;
+
+      // Only apply pagination if there are query parameters
+      if (hasQueryParams) {
+        const limit = Math.min(parseInt(pageSize || 10), 50);
+        const page = parseInt(pageNumber || 1);
+        const offset = (page - 1) * limit;
+
+        findOptions.limit = limit;
+        findOptions.offset = offset;
+
+        const { count, rows } = await Match.findAndCountAll(findOptions);
+        totalPages = Math.ceil(count / limit);
+        currentPage = page;
+
+        return res.status(200).json({
+          success: true,
+          data: rows,
+          meta: {
+            page: currentPage,
+            totalPages: totalPages,
+            total: count,
+            hasNext: currentPage < totalPages,
+            hasPrev: currentPage > 1,
+          },
+        });
+      }
+
+      // If no query parameters, return all data without pagination
+      const { count, rows } = await Match.findAndCountAll(findOptions);
+
+      res.status(200).json({
+        success: true,
+        data: rows,
+        meta: {
+          page: 1,
+          totalPages: 1,
+          total: count,
+          hasNext: false,
+          hasPrev: false,
+        },
       });
     } catch (error) {
       next(error);

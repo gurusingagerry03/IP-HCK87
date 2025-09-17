@@ -92,7 +92,7 @@ export default function Navbar() {
                   ⚽
                 </span>
                 <span className="text-2xl font-bold bg-[linear-gradient(180deg,#ffd7b0_10%,#ffb066_45%,#ff7a3d_90%)] bg-clip-text text-transparent">
-                  FootballHub
+                  Ninety Minutes
                 </span>
               </NavLink>
             </div>

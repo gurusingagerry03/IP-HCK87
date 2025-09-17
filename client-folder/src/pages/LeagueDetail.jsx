@@ -392,19 +392,41 @@ export default function LeagueDetail() {
                         value={
                           searchParams.get('date')
                             ? (() => {
-                                // Convert MM/DD/YYYY to YYYY-MM-DD for date input
-                                const dateStr = searchParams.get('date');
-                                const [month, day, year] = dateStr.split('/');
-                                return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                                try {
+                                  // Convert MM/DD/YYYY to YYYY-MM-DD for date input
+                                  const dateStr = searchParams.get('date');
+                                  const [month, day, year] = dateStr.split('/');
+
+                                  if (year && month && day) {
+                                    return `${year}-${month.padStart(2, '0')}-${day.padStart(
+                                      2,
+                                      '0'
+                                    )}`;
+                                  }
+                                  return '';
+                                } catch (error) {
+                                  console.error('Date parsing error:', error);
+                                  return '';
+                                }
                               })()
                             : ''
                         }
                         onChange={(e) => {
                           if (e.target.value) {
-                            // Convert YYYY-MM-DD to MM/DD/YYYY for URL params
-                            const [year, month, day] = e.target.value.split('-');
-                            const formattedDate = `${month}/${day}/${year}`;
-                            setSearchParams({ ...obj, date: formattedDate, pageNumber: 1 });
+                            try {
+                              // Convert YYYY-MM-DD to MM/DD/YYYY for URL params
+                              const [year, month, day] = e.target.value.split('-');
+
+                              if (year && month && day) {
+                                // Remove leading zeros for consistency with MM/DD/YYYY format
+                                const formattedDate = `${parseInt(month)}/${parseInt(day)}/${year}`;
+                                setSearchParams({ ...obj, date: formattedDate, pageNumber: 1 });
+                              }
+                            } catch (error) {
+                              console.error('Date conversion error:', error);
+                              // Clear date if conversion fails
+                              setSearchParams({ ...obj, date: '', pageNumber: 1 });
+                            }
                           } else {
                             setSearchParams({ ...obj, date: '', pageNumber: 1 });
                           }

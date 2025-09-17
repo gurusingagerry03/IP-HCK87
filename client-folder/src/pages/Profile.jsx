@@ -98,7 +98,7 @@ export default function Profile() {
                 <span>←</span>
                 <span>Back to Home</span>
               </button>
-              
+
               <button
                 type="button"
                 onClick={() => {

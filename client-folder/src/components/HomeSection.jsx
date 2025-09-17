@@ -119,8 +119,8 @@ export function HomeSection() {
               variants={fastItem}
               className="mt-6 text-lg md:text-xl text-white/70 max-w-2xl mx-auto lg:mx-0"
             >
-              Discover leagues, explore clubs, and dive deep into the world of football with our
-              comprehensive platform.
+              Discover leagues, explore clubs, and dive deep into the beautiful game with Ninety
+              Minutes - your comprehensive football platform.
             </motion.p>
 
             <motion.div

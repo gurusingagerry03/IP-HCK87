@@ -74,6 +74,19 @@ module.exports = (sequelize, DataTypes) => {
           },
         },
       },
+      role: {
+        type: DataTypes.ENUM('admin', 'user'),
+        allowNull: false,
+        defaultValue: 'user',
+        validate: {
+          notNull: { msg: 'Role is required' },
+          notEmpty: { msg: 'Role is required' },
+          isIn: {
+            args: [['admin', 'user']],
+            msg: 'Role must be either admin or user',
+          },
+        },
+      },
     },
     {
       sequelize,

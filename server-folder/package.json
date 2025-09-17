@@ -1,7 +1,7 @@
 {
-  "name": "football-league-api",
+  "name": "ninety-minutes-api",
   "version": "1.0.0",
-  "description": "RESTful API for managing football league data",
+  "description": "Ninety Minutes - RESTful API for managing football league data",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
