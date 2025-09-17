@@ -44,7 +44,7 @@ class ForbiddenError extends CustomError {
 class ConflictError extends CustomError {
   constructor(message = 'Resource conflict', field = null) {
     super(message, 409);
-    this.name = 'BadRequest';
+    this.name = 'Conflict';
     this.field = field;
   }
 }

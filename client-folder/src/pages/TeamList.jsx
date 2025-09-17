@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchClub } from '../store/clubSlice';
 import http from '../helpers/http.jsx';
 
 export default function TeamList() {
-  const [teams, setTeams] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch();
+  const { teams, meta, loading, error } = useSelector((state) => state.clubs);
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalTeams, setTotalTeams] = useState(0);
+  const totalPages = meta.totalPages || 0;
+  const totalTeams = meta.total || 0;
   const [imageErrors, setImageErrors] = useState(new Set()); // Track failed images
 
   // Modal states
@@ -27,33 +29,19 @@ export default function TeamList() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const fetchTeams = async (page = 1, searchTerm = '') => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams({
-        'page[number]': page,
-        'page[size]': pageSize,
-      });
+  const fetchTeams = (page = 1, searchTerm = '') => {
+    const params = {
+      'page[number]': page,
+      'page[size]': pageSize,
+    };
 
-      if (searchTerm.trim()) {
-        params.append('q', searchTerm.trim());
-      }
-
-      const response = await http.get(`/teams?${params}`);
-      setTeams(response.data.data || []);
-      setTotalPages(response.data.meta?.totalPages || 1);
-      setTotalTeams(response.data.meta?.total || 0);
-    } catch (error) {
-      console.error('Error fetching teams:', error);
-      setTeams([]);
-      setTotalPages(1);
-      setTotalTeams(0);
-    } finally {
-      setLoading(false);
+    if (searchTerm.trim()) {
+      params.q = searchTerm.trim();
     }
+
+    dispatch(fetchClub(params));
   };
 
-  // Initialize from URL params on component mount
   useEffect(() => {
     const urlSearch = searchParams.get('search') || '';
     const urlPage = parseInt(searchParams.get('page')) || 1;
@@ -76,7 +64,7 @@ export default function TeamList() {
       newParams.set('page', currentPage.toString());
     }
     setSearchParams(newParams);
-  }, [currentPage, search]);
+  }, [currentPage, search, dispatch]);
 
   const handleSearchChange = (e) => {
     setSearch(e.target.value);
@@ -151,7 +139,7 @@ export default function TeamList() {
       const response = await http.get(`/teams/${team.id}`);
       console.log('Gallery API response:', response.data);
       console.log('imgUrls from API:', response.data.imgUrls);
-      
+
       const images = response.data.imgUrls || [];
       console.log('Setting gallery images:', images);
       setGalleryImages(images);
@@ -375,7 +363,7 @@ export default function TeamList() {
                 />
               </div>
               <div className="mt-3 sm:mt-0 text-sm text-gray-600">
-                Showing {teams.length} of {totalTeams} teams
+                Showing {(teams || []).length} of {totalTeams} teams
               </div>
             </div>
           </div>
@@ -386,7 +374,11 @@ export default function TeamList() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 <span className="ml-2 text-gray-600">Loading teams...</span>
               </div>
-            ) : teams.length === 0 ? (
+            ) : error ? (
+              <div className="text-center py-12">
+                <p className="text-red-500">Error loading teams: {error}</p>
+              </div>
+            ) : (teams || []).length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-gray-500">No teams found</p>
               </div>
@@ -412,7 +404,7 @@ export default function TeamList() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {teams.map((team) => (
+                  {(teams || []).map((team) => (
                     <tr key={team.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
@@ -473,7 +465,7 @@ export default function TeamList() {
             )}
           </div>
 
-          {!loading && teams.length > 0 && totalPages > 1 && (
+          {!loading && (teams || []).length > 0 && totalPages > 1 && (
             <div className="px-6 py-4 border-t border-gray-200">
               <div className="flex items-center justify-between">
                 <div className="text-sm text-gray-600">
@@ -762,7 +754,8 @@ export default function TeamList() {
                         className="w-full h-32 object-cover rounded-lg border"
                         onError={(e) => {
                           console.error('Image failed to load:', image);
-                          e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA2MEw0NS41IDQ5LjVMNjUgNjlNNjUgNDVINjVNNjUgNDVINjVNMzUgNDBINjVWNDBIMzVWNDBaIiBzdHJva2U9IiM5Q0E0QUYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjx0ZXh0IHg9IjUwIiB5PSI4MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiBmaWxsPSIjOUNBNEFGIj5JbWFnZSBOb3QgRm91bmQ8L3RleHQ+Cjwvc3ZnPgo=';
+                          e.target.src =
+                            'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA2MEw0NS41IDQ5LjVMNjUgNjlNNjUgNDVINjVNNjUgNDVINjVNMzUgNDBINjVWNDBIMzVWNDBaIiBzdHJva2U9IiM5Q0E0QUYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjx0ZXh0IHg9IjUwIiB5PSI4MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiBmaWxsPSIjOUNBNEFGIj5JbWFnZSBOb3QgRm91bmQ8L3RleHQ+Cjwvc3ZnPgo=';
                         }}
                         onLoad={() => console.log('Image loaded successfully:', image.url || image)}
                       />

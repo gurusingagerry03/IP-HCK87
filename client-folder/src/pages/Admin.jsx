@@ -25,7 +25,6 @@ export default function Admin() {
     upcomingMatches: 0,
   });
 
-  // Fetch all data on component mount
   useEffect(() => {
     const fetchInitialData = async () => {
       try {

@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import http from '../helpers/http';
+import toast from 'react-hot-toast';
 
 const clubSlice = createSlice({
   name: 'club',
@@ -30,6 +31,11 @@ const clubSlice = createSlice({
 export const clubReducer = clubSlice.reducer;
 
 export const fetchClub = createAsyncThunk('name/club', async function fetchClub(params, thunkAPI) {
-  const response = await http.get('/teams', { params });
-  return response.data;
+  try {
+    const response = await http.get('/teams', { params });
+    return response.data;
+  } catch (error) {
+    toast('Failed to fetch teams', { icon: '❌' });
+    throw error;
+  }
 });
