@@ -93,19 +93,4 @@ const server = app.listen(port, () => {
   console.log(`   - Matches: GET/POST /api/v1/matches`);
 });
 
-// Handle graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received. Shutting down gracefully...');
-  server.close(() => {
-    console.log('Process terminated');
-  });
-});
-
-process.on('SIGINT', () => {
-  console.log('SIGINT received. Shutting down gracefully...');
-  server.close(() => {
-    console.log('Process terminated');
-  });
-});
-
 module.exports = app;

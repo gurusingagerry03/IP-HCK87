@@ -27,7 +27,13 @@ router.post(
 );
 router.patch('/generate-descriptions/:id', teamController.updateTeamDescription);
 // Updated route for multiple images upload (max 4 files)
-router.patch('/img-url/:id', upload.array('images', 4), teamController.uploadImageUrlTeam);
+router.patch(
+  '/img-url/:id',
+  authenticate,
+  adminOnly,
+  upload.array('images', 4),
+  teamController.uploadImageUrlTeam
+);
 // Add route for deleting specific image
-router.delete('/img-url/:id/:imageIndex', teamController.deleteTeamImage);
+router.delete('/img-url/:id/:imageIndex', authenticate, adminOnly, teamController.deleteTeamImage);
 module.exports = router;

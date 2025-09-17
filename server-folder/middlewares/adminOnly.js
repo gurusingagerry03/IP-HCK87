@@ -6,12 +6,9 @@ const { UnauthorizedError } = require('../helpers/customErrors');
  */
 const adminOnly = (req, res, next) => {
   try {
-    // Check if user exists (should be set by authentication middleware)
     if (!req.user) {
       throw new UnauthorizedError('Authentication required');
     }
-
-    // Check if user has admin role
     if (req.user.role !== 'admin') {
       throw new UnauthorizedError('Admin access required');
     }
