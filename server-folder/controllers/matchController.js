@@ -39,27 +39,40 @@ class matchController {
             'Match preview and prediction already exists, no update made or match is finished',
         });
       }
+      //prompt with prediction score
       const prompt = `
-          You are given accurate football match data. 
-          Your task is ONLY to generate two narrative fields: "match_preview" and "prediction". 
-          Do not invent statistics, referees, or numbers. Focus on natural sentences summarizing the match. 
-          Always respond in a valid JSON object with exactly these two fields.  
+          You are a professional football analyst tasked with generating match preview and prediction.
+
+          Your task:
+          1. Analyze both teams' current form, playing style, and head-to-head history
+          2. Generate a realistic match preview and detailed prediction
+          3. Provide a realistic score prediction based on teams' strengths 
           match: ${match.HomeTeam.name} vs ${match.AwayTeam.name}
           date: ${match.match_date}
           competition: ${match.League.name}
           Output format (JSON only, no extra text):
         {
           "match_preview": "Write 2–3 sentences describing the general preview of the match.",
-          "prediction": "Write a detailed prediction paragraph."
+          "prediction": "Write a detailed prediction paragraph.",
+          "predicted_score": {"home": number, "away": number}
         }
       `;
       let response = await generateAi(prompt, 'gemini-2.5-flash-lite');
       const clean = response.replace(/```json|```/g, '').trim();
       const parsedResponse = JSON.parse(clean);
+
       match_preview = parsedResponse.match_preview;
       prediction = parsedResponse.prediction;
 
-      await Match.update({ match_preview, prediction }, { where: { id: id } });
+      await Match.update(
+        {
+          match_preview,
+          prediction,
+          predicted_score_home: parsedResponse.predicted_score.home,
+          predicted_score_away: parsedResponse.predicted_score.away,
+        },
+        { where: { id: id } }
+      );
       return res.status(200).json({
         mesage: 'Successfully updated match preview and prediction',
       });

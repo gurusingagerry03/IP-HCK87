@@ -35,6 +35,7 @@ export default function ClubDetail() {
         setError(null);
 
         // Fetch club details and players in parallel
+        await http.patch(`/teams/generate-descriptions/${id}`);
         const [clubResponse, playersResponse] = await Promise.all([
           http.get(`/teams/${id}`),
           http.get(`/players/team/${id}`),

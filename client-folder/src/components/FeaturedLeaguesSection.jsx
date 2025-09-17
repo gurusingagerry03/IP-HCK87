@@ -1,6 +1,6 @@
 import { motion, useInView } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router'; // 👈 TAMBAH IMPORT INI
+import { Link } from 'react-router';
 import http from '../helpers/http';
 
 export function FeaturedLeaguesSection() {

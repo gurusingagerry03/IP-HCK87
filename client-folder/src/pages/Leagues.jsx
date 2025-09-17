@@ -24,13 +24,11 @@ export default function Leagues() {
     fetchLeagues();
   }, []);
 
-
-
   const leagueStats = [
-    { label: "Total Leagues", value: "100+", icon: "🏆" },
-    { label: "Countries", value: "50+", icon: "🌍" },
-    { label: "Total Teams", value: "2000+", icon: "⚽" },
-    { label: "Active Seasons", value: "2024/25", icon: "📅" }
+    { label: 'Total Leagues', value: '100+', icon: '🏆' },
+    { label: 'Countries', value: '50+', icon: '🌍' },
+    { label: 'Total Teams', value: '2000+', icon: '⚽' },
+    { label: 'Active Seasons', value: '2025/26', icon: '📅' },
   ];
 
   return (
@@ -49,7 +47,8 @@ export default function Leagues() {
             </span>
           </h1>
           <p className="text-xl text-white/70 max-w-2xl mx-auto">
-            Explore football leagues from around the world. Discover competitions, track your favorites, and stay updated with the latest league information.
+            Explore football leagues from around the world. Discover competitions, track your
+            favorites, and stay updated with the latest league information.
           </p>
         </motion.div>
 
@@ -76,7 +75,6 @@ export default function Leagues() {
             ))}
           </div>
         </motion.div>
-
 
         {/* All Leagues Section */}
         {leagues.length > 0 && (

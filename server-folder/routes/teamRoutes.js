@@ -7,5 +7,5 @@ router.get('/:id', teamController.getTeamById);
 
 // Sync endpoints
 router.post('/sync/:leagueId', teamController.synchronizeTeamsAndPlayersFromAPI);
-
+router.patch('/generate-descriptions/:id', teamController.updateTeamDescription);
 module.exports = router;

@@ -22,6 +22,7 @@ export default function MatchPrediction() {
       setError(null);
 
       try {
+        await http.put(`/matches/preview/${matchId}`);
         const response = await http.get(`/matches/${matchId}`);
         if (response.data.success) {
           setMatch(response.data.data);
@@ -50,21 +51,7 @@ export default function MatchPrediction() {
     return { dateStr, time: time || '' };
   };
 
-  const formatMatchScore = (match) => {
-    if (match?.status === 'finished' && match.home_score !== null && match.away_score !== null) {
-      return `${match.home_score} - ${match.away_score}`;
-    }
-    return 'VS';
-  };
-
   // Static prediction data for demonstration
-  const staticPrediction = {
-    match_preview:
-      'This upcoming fixture promises to be an exciting encounter between two competitive sides. Both teams have shown strong form recently and will be looking to secure crucial points in this important match.',
-    ai_prediction:
-      "Based on current form, head-to-head records, and team statistics, this match is expected to be closely contested. The home advantage could play a crucial role, while both teams possess the quality to create scoring opportunities. A tactical battle is anticipated with both managers likely to employ strategic approaches to gain the upper hand.",
-    predicted_score: { home: 2, away: 1 }
-  };
 
   if (loading) {
     return (
@@ -125,7 +112,14 @@ export default function MatchPrediction() {
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 px-4 py-2 bg-[#111111]/70 hover:bg-[#111111]/60 border border-white/10 rounded-xl text-white transition-all duration-300"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
           <span className="font-medium">Back</span>
@@ -197,7 +191,7 @@ export default function MatchPrediction() {
                       </div>
                     </div>
                     <div className="text-3xl font-bold text-blue-400">
-                      {staticPrediction.predicted_score.home}
+                      {match?.predicted_score_home ?? '-'}
                     </div>
                   </div>
 
@@ -228,7 +222,7 @@ export default function MatchPrediction() {
                       </div>
                     </div>
                     <div className="text-3xl font-bold text-blue-400">
-                      {staticPrediction.predicted_score.away}
+                      {match?.predicted_score_away ?? '-'}
                     </div>
                   </div>
                 </div>
@@ -266,7 +260,9 @@ export default function MatchPrediction() {
                   <span>👁️</span>
                   Match Preview
                 </h2>
-                <p className="text-white/80 leading-relaxed text-lg">{staticPrediction.match_preview}</p>
+                <p className="text-white/80 leading-relaxed text-lg">
+                  {match?.match_preview || 'Generating Match Preview...'}
+                </p>
               </div>
 
               {/* AI Prediction */}
@@ -276,11 +272,10 @@ export default function MatchPrediction() {
                   AI Prediction
                 </h2>
                 <p className="text-white/80 leading-relaxed text-lg">
-                  {staticPrediction.ai_prediction}
+                  {match?.prediction || 'Generating Tactical Analysis...'}
                 </p>
               </div>
             </motion.div>
-
           </div>
         </div>
       </div>

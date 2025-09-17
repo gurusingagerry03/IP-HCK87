@@ -234,30 +234,6 @@ class teamController {
         syncResults.errors.push(`Bulk operation failed: ${bulkError.message}`);
       }
 
-      const teamsNeedingDesc = await Team.findAll({
-        where: {
-          description: null,
-        },
-      });
-
-      for (const t of teamsNeedingDesc) {
-        const prompt = ` Generate a professional club information description for this football team. 
-                Keep it exactly 2-3 sentences, around 50-70 words maximum.
-                Include: team name, location, founding year, and brief history/characteristics.
-                DO NOT mention stadium name or capacity.
-                Make it sound professional and informative like a club profile.
-                
-                Team Details:
-                - Name: ${t.name}
-                - Country: ${t.country}  
-                - Founded: ${t.foundedYear}
-                - Coach: ${t.coach || 'N/A'}
-                
-                Example format: "[Team] is a professional football club based in [City], [Country]. Founded in [Year], the club has a rich history and continues to compete at the highest level of football."`;
-        const desc = await generateAi(prompt, 'gemini-2.5-flash');
-        await Team.update({ description: desc }, { where: { id: t.id, description: null } });
-      }
-
       return res.status(200).json({
         success: true,
         data: syncResults,
@@ -265,7 +241,51 @@ class teamController {
       });
     } catch (error) {
       console.log(error);
-      m;
+      next(error);
+    }
+  }
+
+  // update description team by id
+  static async updateTeamDescription(req, res, next) {
+    try {
+      const { id } = req.params;
+      if (!id || isNaN(id) || parseInt(id) <= 0) {
+        throw new BadRequestError('Team ID must be a positive number');
+      }
+      const team = await Team.findByPk(parseInt(id));
+      if (!team) {
+        throw new NotFoundError(`Team with ID ${id} not found`);
+      }
+
+      const prompt = ` Generate a professional club information description for this football team. 
+                Keep it exactly 2-3 sentences, around 50-70 words maximum.
+                Include: team name, location, founding year, and brief history/characteristics.
+                DO NOT mention stadium name or capacity.
+                Make it sound professional and informative like a club profile.
+                
+                Team Details:
+                - Name: ${team.name}
+                - Country: ${team.country}  
+                - Founded: ${team.foundedYear}
+                - Coach: ${team.coach || 'N/A'}
+
+                Example format: "[Team] is a professional football club based in [City], [Country]. Founded in [Year], the club has a rich history and continues to compete at the highest level of football."`;
+      // If description already exists, skip regeneration
+      if (team.description) {
+        return res.status(200).json({
+          message: 'Team description already exists, skipping regeneration',
+        });
+      }
+
+      const desc = await generateAi(prompt, 'gemini-2.5-flash-lite');
+      await Team.update({ description: desc }, { where: { id } });
+
+      return res.status(200).json({
+        message: 'Team description updated successfully',
+      });
+    } catch (error) {
+      console.log(error, '<<< error generate description');
+
       next(error);
     }
   }

@@ -44,6 +44,8 @@ module.exports = (sequelize, DataTypes) => {
       tactical_analysis: DataTypes.TEXT,
       match_preview: DataTypes.TEXT,
       prediction: DataTypes.TEXT,
+      predicted_score_home: DataTypes.INTEGER,
+      predicted_score_away: DataTypes.INTEGER,
     },
     {
       sequelize,
