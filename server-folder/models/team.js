@@ -24,11 +24,6 @@ module.exports = (sequelize, DataTypes) => {
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE',
       });
-      Team.hasMany(models.ImageTeam, {
-        foreignKey: 'teamId',
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE',
-      });
       Team.hasMany(models.Match, {
         foreignKey: 'home_team_id',
         as: 'HomeMatches',
@@ -188,6 +183,11 @@ module.exports = (sequelize, DataTypes) => {
             msg: 'Coach name must be less than 100 characters',
           },
         },
+      },
+      imgUrls: {
+        type: DataTypes.JSON,
+        defaultValue: [],
+        allowNull: true,
       },
     },
     {

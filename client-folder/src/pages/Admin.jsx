@@ -181,34 +181,54 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="container mx-auto px-6 py-12">
+        {/* Navigation Bar */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl shadow-lg border border-slate-200 p-4 mb-6"
+        >
+          <div className="flex items-center justify-between">
+            {/* Left navigation */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate('/')}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all duration-300"
+              >
+                <span>←</span>
+                <span>Back Home</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/admin/teams')}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all duration-300"
+              >
+                <span>👥</span>
+                <span>Team List</span>
+              </button>
+            </div>
+
+            {/* Right logout */}
+            <button
+              onClick={() => {
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('user_data');
+                navigate('/login');
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 rounded-xl transition-all duration-300"
+            >
+              <span>🚪</span>
+              <span>Logout</span>
+            </button>
+          </div>
+        </motion.div>
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12 relative"
+          transition={{ delay: 0.1 }}
+          className="text-center mb-12"
         >
-          {/* Back Home Button - Left */}
-          <button
-            onClick={() => navigate('/')}
-            className="absolute left-0 top-0 flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-slate-400 transition-all duration-300"
-          >
-            <span>←</span>
-            <span>Back Home</span>
-          </button>
-
-          {/* Logout Button - Right */}
-          <button
-            onClick={() => {
-              localStorage.removeItem('access_token');
-              localStorage.removeItem('user_data');
-              navigate('/login');
-            }}
-            className="absolute right-0 top-0 flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-600 rounded-xl hover:bg-red-500/20 hover:border-red-500/50 transition-all duration-300"
-          >
-            <span>🚪</span>
-            <span>Logout</span>
-          </button>
-
           <h1 className="text-4xl font-bold text-slate-800 mb-2">Ninety Minutes - Admin Panel</h1>
           <p className="text-slate-600">Content Management System</p>
         </motion.div>
