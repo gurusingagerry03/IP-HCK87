@@ -2,12 +2,12 @@ const { Favorite } = require('../models');
 const { User } = require('../models');
 const { BadRequestError, UnauthorizedError, NotFoundError } = require('../helpers/customErrors');
 // error throw
-const { BadRequestError, NotFoundError } = require('../helpers/customErrors');
+
 class favoriteController {
   static async addFavorite(req, res, next) {
     try {
       const userId = req.user.id;
-      const { teamId } = req.body;
+      const { teamId } = req.params;
 
       if (!teamId || isNaN(teamId) || parseInt(teamId) <= 0) {
         throw new BadRequestError('Team ID must be a positive number');

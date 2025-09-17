@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import http from '../helpers/http';
 import LeagueTable from '../components/LeagueTable';
 
@@ -65,8 +66,8 @@ export default function LeagueDetail() {
           setLeague(leagueResponse.data.data);
         }
       } catch (err) {
-        console.error('Error fetching league data:', err);
         setError('Failed to load league data');
+        toast.error('Failed to load league details. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -115,7 +116,6 @@ export default function LeagueDetail() {
         setMatchMeta(response.data.meta);
       }
     } catch (err) {
-      console.error('Error fetching matches:', err);
       setMatches([]);
       setMatchMeta({
         currentPage: 1,

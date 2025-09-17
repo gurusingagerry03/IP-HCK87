@@ -38,7 +38,6 @@ export default function Navbar() {
           setUser(parsedUser);
           setIsLoggedIn(true);
         } catch (error) {
-          console.error('Error parsing user data:', error);
           localStorage.removeItem('access_token');
           localStorage.removeItem('user_data');
           setUser(null);

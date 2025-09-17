@@ -1,9 +1,51 @@
 const { User } = require('../models');
 const { comparePasswords, hashPassword } = require('../helpers/bcrypt');
 const { generateToken } = require('../helpers/jwt');
+const { OAuth2Client } = require('google-auth-library');
 const { BadRequestError, UnauthorizedError } = require('../helpers/customErrors');
 
 class userController {
+  static async googleLogin(req, res, next) {
+    try {
+      const { googleToken } = req.body;
+      if (!googleToken) {
+        throw { name: 'BadRequest', message: 'Google token is required' };
+      }
+      const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+      const ticket = await client.verifyIdToken({
+        idToken: googleToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      const payload = ticket.getPayload();
+
+      // CEK USER SUDAH ADA ATAU BELUM
+      const [user, created] = await User.findOrCreate({
+        where: { email: payload.email },
+        defaults: {
+          email: payload.email,
+          fullname: `${payload.given_name} ${payload.family_name}`,
+          password: Math.random().toString(36).slice(-8),
+        },
+        hooks: false,
+      });
+      console.log(user, '<<< user google');
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          access_token: generateToken({ id: user.id }),
+          user: {
+            id: user.id,
+            email: user.email,
+            fullname: user.fullname,
+          },
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   static async register(req, res, next) {
     try {
       const { fullname, email, password } = req.body;
@@ -12,11 +54,6 @@ class userController {
         fullname,
         email,
         password,
-      });
-
-      const access_token = generateToken({
-        id: user.id,
-        email: user.email,
       });
 
       return res.status(201).json({

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router';
+import toast from 'react-hot-toast';
 
 export default function Favorites() {
   const [favorites, setFavorites] = useState([]);
@@ -16,7 +17,7 @@ export default function Favorites() {
         setFavorites(JSON.parse(savedFavorites));
       }
     } catch (error) {
-      console.error('Error loading favorites from localStorage:', error);
+      // Silent error for localStorage issues
     } finally {
       setLoading(false);
     }
@@ -28,7 +29,7 @@ export default function Favorites() {
       setFavorites(updatedFavorites);
       localStorage.setItem('footballFavorites', JSON.stringify(updatedFavorites));
     } catch (error) {
-      console.error('Error removing favorite:', error);
+      toast.error('Failed to remove favorite. Please try again.');
     }
   };
 
@@ -37,7 +38,7 @@ export default function Favorites() {
       setFavorites([]);
       localStorage.removeItem('footballFavorites');
     } catch (error) {
-      console.error('Error clearing favorites:', error);
+      toast.error('Failed to clear favorites. Please try again.');
     }
   };
 

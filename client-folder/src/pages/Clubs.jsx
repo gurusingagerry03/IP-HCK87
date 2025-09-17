@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router';
+import toast from 'react-hot-toast';
 import http from '../helpers/http';
 import { useSearchParams } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
@@ -55,7 +56,7 @@ export default function Clubs() {
         setFavorites(JSON.parse(savedFavorites));
       }
     } catch (error) {
-      console.error('Error loading favorites from localStorage:', error);
+      // Silent error for localStorage issues
     }
   }, []);
 
@@ -65,8 +66,8 @@ export default function Clubs() {
         const response = await http.get('/teams');
         setAllTeams(response.data.data || []);
       } catch (error) {
-        console.error('Error fetching all teams:', error);
         setAllTeams([]);
+        toast.error('Failed to load teams. Please try again.');
       }
     };
     fetchAllTeams();
@@ -86,7 +87,7 @@ export default function Clubs() {
       setFavorites(updatedFavorites);
       localStorage.setItem('footballFavorites', JSON.stringify(updatedFavorites));
     } catch (error) {
-      console.error('Error updating favorites:', error);
+      toast.error('Failed to update favorites. Please try again.');
     }
   };
 

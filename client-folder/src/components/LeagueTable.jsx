@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import http from '../helpers/http';
 
 export default function LeagueTable({ leagueId }) {
@@ -18,7 +19,6 @@ export default function LeagueTable({ leagueId }) {
 
     try {
       const response = await http.get(`/matches/league/${leagueId}`);
-      console.log('response', response.data.data);
 
       if (response.data.success) {
         const matches = response.data.data;
@@ -27,8 +27,8 @@ export default function LeagueTable({ leagueId }) {
         setStandings(calculatedStandings);
       }
     } catch (err) {
-      console.error('Error fetching standings:', err);
       setError('Failed to load league table');
+      toast.error('Failed to load league table. Please try again.');
     } finally {
       setLoading(false);
     }

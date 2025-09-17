@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import http from '../helpers/http';
 
 export default function ClubDetail() {
@@ -44,8 +45,10 @@ export default function ClubDetail() {
         setClub(clubResponse.data.data || clubResponse.data);
         setPlayers(playersResponse.data.data || playersResponse.data || []);
       } catch (error) {
-        console.error('Error fetching club data:', error);
-        setError(error.response?.data?.message || error.message || 'Failed to load club data');
+        const errorMessage =
+          error.response?.data?.message || error.message || 'Failed to load club data';
+        setError(errorMessage);
+        toast.error(errorMessage);
       } finally {
         setLoading(false);
       }

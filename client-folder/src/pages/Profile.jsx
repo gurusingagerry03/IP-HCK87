@@ -26,7 +26,6 @@ export default function Profile() {
           email: parsedUser.email || '',
         });
       } catch (error) {
-        console.error('Error parsing user data:', error);
         navigate('/login');
       }
     } else {

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import http from '../helpers/http';
 
 export default function MatchSummary() {
@@ -26,13 +27,12 @@ export default function MatchSummary() {
         const response = await http.get(`/matches/${matchId}`);
         if (response.data.success) {
           setMatch(response.data.data);
-          console.log('✅ Match data loaded');
         } else {
           setError('Match not found');
         }
       } catch (err) {
-        console.error('Error:', err);
         setError('Failed to load match data');
+        toast.error('Failed to load match data. Please try again.');
       } finally {
         setLoading(false);
       }

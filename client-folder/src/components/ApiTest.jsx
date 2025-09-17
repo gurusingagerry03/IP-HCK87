@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 import http from '../helpers/http';
 
 export default function ApiTest() {
@@ -12,15 +13,13 @@ export default function ApiTest() {
     setResult(null);
 
     try {
-      console.log('Testing API connection...');
-
       // Test basic connection
       const response = await http.get('/leagues');
-      console.log('API Response:', response);
       setResult(response.data);
+      toast.success('API connection test successful!');
     } catch (err) {
-      console.error('API Error:', err);
       setError(err.message);
+      toast.error(`API test failed: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -32,14 +31,12 @@ export default function ApiTest() {
     setResult(null);
 
     try {
-      console.log('Testing specific league...');
-
       const response = await http.get('/leagues/2');
-      console.log('League Response:', response);
       setResult(response.data);
+      toast.success('League API test successful!');
     } catch (err) {
-      console.error('League Error:', err);
       setError(err.message);
+      toast.error(`League test failed: ${err.message}`);
     } finally {
       setLoading(false);
     }

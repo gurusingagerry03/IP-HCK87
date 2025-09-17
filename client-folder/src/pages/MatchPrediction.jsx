@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import http from '../helpers/http';
 
 export default function MatchPrediction() {
@@ -30,8 +31,8 @@ export default function MatchPrediction() {
           setError('Match not found');
         }
       } catch (err) {
-        console.error('Error fetching match data:', err);
         setError('Failed to load match data');
+        toast.error('Failed to load match data. Please try again.');
       } finally {
         setLoading(false);
       }

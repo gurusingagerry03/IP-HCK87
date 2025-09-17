@@ -21,7 +21,7 @@ export function FavoriteSection() {
             setFavorites(JSON.parse(savedFavorites));
           }
         } catch (error) {
-          console.error('Error loading favorites:', error);
+          // Silent error for localStorage issues
         }
       }
     };

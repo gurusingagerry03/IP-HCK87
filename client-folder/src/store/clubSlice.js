@@ -30,8 +30,6 @@ const clubSlice = createSlice({
 export const clubReducer = clubSlice.reducer;
 
 export const fetchClub = createAsyncThunk('name/club', async function fetchClub(params, thunkAPI) {
-  console.log(params, 'params di clubSlice');
-
   const response = await http.get('/teams', { params });
   return response.data;
 });
