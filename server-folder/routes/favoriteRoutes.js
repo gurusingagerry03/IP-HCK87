@@ -5,5 +5,6 @@ const { authenticate } = require('../middlewares/authenticate');
 
 router.post('/:teamId', authenticate, favoriteController.addFavorite);
 router.delete('/:id', authenticate, favoriteController.removeFavorite);
+router.get('/', authenticate, favoriteController.getFavoritesByUserId);
 
 module.exports = router;

@@ -1,4 +1,4 @@
-const { Favorite } = require('../models');
+const { Favorite, Team } = require('../models');
 const { User } = require('../models');
 const { BadRequestError, UnauthorizedError, NotFoundError } = require('../helpers/customErrors');
 // error throw
@@ -21,6 +21,8 @@ class favoriteController {
         data: newFavorite,
       });
     } catch (error) {
+      console.log(error);
+
       next(error);
     }
   }
@@ -30,6 +32,11 @@ class favoriteController {
       const userId = req.user.id; // Assuming userId is obtained from authenticated user
       const favorites = await Favorite.findAll({
         where: { userId },
+        include: [
+          {
+            model: Team,
+          },
+        ],
       });
       return res.status(200).json({
         success: true,

@@ -8,22 +8,11 @@ export function FavoriteSection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, amount: 0.3 });
 
-  // Check authentication and load favorites
+  // Check authentication
   useEffect(() => {
     const checkAuth = () => {
       const token = localStorage.getItem('access_token');
       setIsLoggedIn(!!token);
-
-      if (token) {
-        try {
-          const savedFavorites = localStorage.getItem('footballFavorites');
-          if (savedFavorites) {
-            setFavorites(JSON.parse(savedFavorites));
-          }
-        } catch (error) {
-          // Silent error for localStorage issues
-        }
-      }
     };
 
     checkAuth();
@@ -329,30 +318,8 @@ export function FavoriteSection() {
               variants={itemVariants}
               className="text-lg md:text-xl text-white/70 max-w-2xl mx-auto mb-10"
             >
-              You have {favorites.length} teams in your collection. Explore more teams and leagues
-              to expand your favorites!
+              Build your collection of favorite teams and never miss their latest updates!
             </motion.p>
-
-            {/* Preview cards untuk favorite teams */}
-            <motion.div
-              variants={itemVariants}
-              className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto mb-10"
-            >
-              {favorites.slice(0, 3).map((team, index) => (
-                <motion.div
-                  key={team.id}
-                  variants={cardVariants}
-                  className="bg-card/50 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-card/70 transition-colors duration-200"
-                  whileHover={{ y: -4, scale: 1.02 }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                  custom={index}
-                >
-                  <div className="text-3xl mb-3">{team.logo}</div>
-                  <h4 className="text-white font-semibold text-lg mb-1">{team.name}</h4>
-                  <p className="text-white/60 text-sm">{team.league}</p>
-                </motion.div>
-              ))}
-            </motion.div>
 
             <motion.div variants={itemVariants} className="flex items-center gap-4 justify-center">
               <Link to="/favorites">

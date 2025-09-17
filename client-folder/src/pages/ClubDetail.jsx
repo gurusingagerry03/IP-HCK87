@@ -12,7 +12,9 @@ export default function ClubDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('info');
+  const [favorites, setFavorites] = useState([]);
   const [isFavorited, setIsFavorited] = useState(false);
+  const [isAddingFavorite, setIsAddingFavorite] = useState(false);
   const [isTabsSticky, setIsTabsSticky] = useState(false);
 
   // Fixed carousel images for all clubs
@@ -57,6 +59,40 @@ export default function ClubDetail() {
     if (id) {
       fetchClubData();
     }
+  }, [id]);
+
+  // Fetch user's favorites from database
+  useEffect(() => {
+    const fetchFavorites = async () => {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        setFavorites([]);
+        setIsFavorited(false);
+        return;
+      }
+
+      try {
+        const response = await http.get('/favorites', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.data.success) {
+          const userFavorites = response.data.data || [];
+          setFavorites(userFavorites);
+          // Check if current club is in favorites
+          const currentClubIsFavorited = userFavorites.some((fav) => fav.Team?.id === parseInt(id));
+          setIsFavorited(currentClubIsFavorited);
+        }
+      } catch (error) {
+        // Silent error - user might not be logged in
+        setFavorites([]);
+        setIsFavorited(false);
+      }
+    };
+
+    fetchFavorites();
   }, [id]);
 
   // Carousel autoplay
@@ -140,6 +176,68 @@ export default function ClubDetail() {
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [id]);
+
+  // Handle add to favorites
+  const handleAddToFavorites = async () => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      toast.error('Please login to add favorites');
+      return;
+    }
+
+    try {
+      setIsAddingFavorite(true);
+
+      if (isFavorited) {
+        // Remove from favorites
+        const favoriteToRemove = favorites.find((fav) => fav.Team?.id === parseInt(id));
+        if (favoriteToRemove) {
+          await http({
+            method: 'delete',
+            url: `/favorites/${favoriteToRemove.id}`,
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          setFavorites((prev) => prev.filter((fav) => fav.Team?.id !== parseInt(id)));
+          setIsFavorited(false);
+          toast.success('Team removed from favorites!');
+        }
+      } else {
+        // Add to favorites
+        await http({
+          method: 'post',
+          url: `/favorites/${id}`,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        // Refetch favorites to get the complete data structure
+        const response = await http.get('/favorites', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.data.success) {
+          const userFavorites = response.data.data || [];
+          setFavorites(userFavorites);
+          setIsFavorited(true);
+        }
+
+        toast.success('Team added to favorites!');
+      }
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.errors?.[0]?.message ||
+        error.response?.data?.message ||
+        'Failed to update favorites';
+      toast.error(errorMessage);
+    } finally {
+      setIsAddingFavorite(false);
+    }
+  };
 
   // ---- Position helpers ----
   const getPositionGroup = (pos = '') => {
@@ -372,24 +470,33 @@ export default function ClubDetail() {
         >
           <motion.div className="flex justify-end mb-8" variants={itemVariants}>
             <button
-              onClick={() => setIsFavorited(!isFavorited)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl border-2 transition-all duration-300 font-semibold ${
+              onClick={handleAddToFavorites}
+              disabled={isAddingFavorite}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl border-2 transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed ${
                 isFavorited
                   ? 'bg-red-500 border-red-500 text-white hover:bg-red-600'
                   : 'bg-transparent border-white/20 text-white hover:border-accent hover:bg-accent/10'
               }`}
             >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill={isFavorited ? 'currentColor' : 'none'}
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-              </svg>
-              {isFavorited ? 'Remove from Favorites' : 'Add to Favorites'}
+              {isAddingFavorite ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              ) : (
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill={isFavorited ? 'currentColor' : 'none'}
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                </svg>
+              )}
+              {isAddingFavorite
+                ? 'Adding...'
+                : isFavorited
+                ? 'Remove from Favorites'
+                : 'Add to Favorites'}
             </button>
           </motion.div>
 

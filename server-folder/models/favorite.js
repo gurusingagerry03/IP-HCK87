@@ -29,6 +29,16 @@ module.exports = (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: 'Favorite',
+      validate: {
+        async uniqueUserTeam() {
+          const exists = await Favorite.findOne({
+            where: { userId: this.userId, teamId: this.teamId },
+          });
+          if (exists) {
+            throw new Error('User sudah menambahkan tim ini ke favorit.');
+          }
+        },
+      },
     }
   );
   return Favorite;

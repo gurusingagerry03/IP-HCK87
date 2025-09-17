@@ -11,6 +11,7 @@ import ClubDetail from './pages/ClubDetail.jsx';
 import LeagueDetail from './pages/LeagueDetail.jsx';
 import MatchSummary from './pages/MatchSummary.jsx';
 import MatchPrediction from './pages/MatchPrediction.jsx';
+import Admin from './pages/Admin.jsx';
 import ApiTest from './components/ApiTest.jsx';
 import { Route, Routes, Outlet, Navigate } from 'react-router';
 import { BrowserRouter } from 'react-router';
@@ -81,6 +82,7 @@ function MainRoute() {
           }
         />
       </Route>
+      <Route path="/admin" element={<Admin />} />
       <Route path="/leagues/:id" element={<LeagueDetail />} />
       <Route path="/teams/:id" element={<ClubDetail />} />
       <Route path="/matches/:matchId/summary" element={<MatchSummary />} />

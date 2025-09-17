@@ -79,7 +79,7 @@ export function HomeSection() {
               className="text-5xl md:text-7xl font-extrabold leading-[1.05] bg-[linear-gradient(90deg,#FFE29F_0%,#FFA600_30%,#FF6A3D_65%,#C2441E_100%)] bg-clip-text text-transparent"
               style={{ WebkitTextStroke: '0.5px rgba(0,0,0,0.15)' }}
             >
-              Football Hub
+              Ninety Minutes
             </motion.h2>
 
             <motion.div variants={fastItem} className="mt-5 flex justify-center lg:justify-start">
@@ -128,7 +128,7 @@ export function HomeSection() {
               className="mt-8 flex items-center gap-3 justify-center lg:justify-start"
             >
               <Link
-                to="/clubs"
+                to="/leagues"
                 className="px-5 py-3 rounded-2xl bg-[#FF6A3D] text-black font-semibold ring-1 ring-white/10 hover:brightness-110 active:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
               >
                 Explore Leagues
