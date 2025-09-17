@@ -3,8 +3,88 @@ const { http } = require('../helpers/http');
 const { Op } = require('sequelize');
 const { BadRequestError, NotFoundError } = require('../helpers/customErrors');
 const { generateAi } = require('../helpers/aiGenerate');
+const cloudinary = require('cloudinary').v2;
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECREAT,
+});
 
 class teamController {
+  static async uploadImageUrlTeam(req, res, next) {
+    try {
+      const { id } = req.params;
+      const files = req.files; // Now we get array of files
+
+      // Validate tea m exists
+      const team = await Team.findByPk(id);
+      if (!team) {
+        return res.status(404).json({
+          success: false,
+          message: 'Team not found',
+        });
+      }
+      console.log(team);
+
+      // Check if files are provided
+      if (!files || files.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'No images provided',
+        });
+      }
+
+      // Get current images count
+      const currentImages = team.imgUrls || [];
+      const totalImagesAfterUpload = currentImages.length + files.length;
+
+      // Check if total images will exceed 4
+      if (totalImagesAfterUpload > 4) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot upload ${files.length} images. Team already has ${currentImages.length} images. Maximum allowed is 4 images per team.`,
+        });
+      }
+
+      // Upload all images to Cloudinary (Modern way - no Promise wrapper needed)
+      const uploadPromises = files.map(async (file) => {
+        const base64Image = file.buffer.toString('base64');
+        const dataURI = `data:${file.mimetype};base64,${base64Image}`;
+
+        // Cloudinary returns Promise when no callback provided
+        const result = await cloudinary.uploader.upload(dataURI, {
+          folder: 'FOOTBALL_DB/team-images',
+        });
+
+        return {
+          url: result.secure_url,
+          public_id: result.public_id,
+        };
+      });
+
+      // Execute all uploads
+      const uploadResults = await Promise.all(uploadPromises);
+
+      // Update team with new images (append to existing array)
+      const updatedImages = [...currentImages, ...uploadResults];
+      await team.update({ imgUrls: updatedImages });
+
+      res.status(200).json({
+        success: true,
+        message: `Successfully uploaded ${uploadResults.length} images`,
+        data: {
+          teamId: team.id,
+          teamName: team.name,
+          totalImages: updatedImages.length,
+          newImages: uploadResults,
+        },
+      });
+    } catch (error) {
+      console.log(error);
+      next(error);
+    }
+  }
+
   static async getAllTeams(req, res, next) {
     try {
       const {
@@ -34,7 +114,8 @@ class teamController {
       }
 
       // Check if there are any query parameters for pagination or filtering
-      const hasQueryParams = search || country || req.query['page[number]'] || req.query['page[size]'];
+      const hasQueryParams =
+        search || country || req.query['page[number]'] || req.query['page[size]'];
 
       let findOptions = {
         where: whereCondition,
@@ -262,6 +343,71 @@ class teamController {
         success: true,
         data: syncResults,
         message: 'Teams and players synchronization completed',
+      });
+    } catch (error) {
+      console.log(error);
+      next(error);
+    }
+  }
+
+  static async deleteTeamImage(req, res, next) {
+    try {
+      const { id, imageIndex } = req.params;
+
+      // Validate team exists
+      const team = await Team.findByPk(id);
+      if (!team) {
+        return res.status(404).json({
+          success: false,
+          message: 'Team not found',
+        });
+      }
+
+      // Check if team has images
+      const currentImages = team.imgUrls || [];
+      if (currentImages.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Team has no images to delete',
+        });
+      }
+
+      // Validate image index
+      const index = parseInt(imageIndex);
+      if (isNaN(index) || index < 0 || index >= currentImages.length) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid image index',
+        });
+      }
+
+      // Get image to delete
+      const imageToDelete = currentImages[index];
+
+      // Delete from Cloudinary if public_id exists
+      if (imageToDelete.public_id) {
+        try {
+          await cloudinary.uploader.destroy(imageToDelete.public_id);
+        } catch (cloudinaryError) {
+          console.log('Cloudinary deletion error:', cloudinaryError);
+        }
+      }
+
+      // Remove image from array
+      const updatedImages = currentImages.filter((_, i) => i !== index);
+
+      // Update team
+      await team.update({ imgUrls: updatedImages });
+
+      res.status(200).json({
+        success: true,
+        message: 'Image deleted successfully',
+        data: {
+          teamId: team.id,
+          teamName: team.name,
+          remainingImages: updatedImages.length,
+          deletedImage: imageToDelete,
+        },
       });
     } catch (error) {
       console.log(error);
