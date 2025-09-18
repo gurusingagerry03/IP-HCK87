@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const teamController = require('../controllers/teamController');
-const { authenticate } = require('../middlewares/authenticate');
+const authenticate = require('../middlewares/authenticate');
 const adminOnly = require('../middlewares/adminOnly');
 const multer = require('multer');
 

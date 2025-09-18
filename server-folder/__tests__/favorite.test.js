@@ -382,4 +382,14 @@ describe('Favorite', () => {
       expect(mockFavoriteWithError.destroy).toHaveBeenCalled();
     });
   });
+
+  // Clean up all mocks after all tests complete
+  afterAll(() => {
+    jest.restoreAllMocks();
+  });
+
+  // Clear mock calls after each test to prevent interference
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 });

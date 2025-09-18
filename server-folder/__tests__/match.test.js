@@ -92,6 +92,11 @@ describe('Match Controller', () => {
     userToken = jwt.sign({ id: 2, role: 'user' }, process.env.JWT_SECRET || 'test-secret');
   });
 
+  afterAll(() => {
+    // Restore all mocks after all tests complete
+    jest.restoreAllMocks();
+  });
+
   beforeEach(() => {
     // Reset all mocks before each test
     jest.clearAllMocks();
@@ -183,6 +188,11 @@ describe('Match Controller', () => {
       if (id === 2) return Promise.resolve(mockUser);
       return Promise.resolve(null);
     });
+  });
+
+  afterEach(() => {
+    // Clear all mocks after each test to prevent state pollution
+    jest.clearAllMocks();
   });
 
   describe('GET /api/v1/matches', () => {

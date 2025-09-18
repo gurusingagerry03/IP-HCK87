@@ -2,11 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { errorHandling } = require('./middlewares/errorHandling');
-const LoggingMiddleware = require('./middlewares/logging/loggingMiddleware');
 const apiRoutes = require('./routes');
 
 const app = express();
-const port = process.env.PORT || 3000;
 
 // Middlewares
 app.use(
@@ -19,9 +17,6 @@ app.use(
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-
-// Custom middlewares
-app.use(LoggingMiddleware.logRequests());
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -79,18 +74,5 @@ app.use((req, res) => {
 
 // Error handling middleware (must be last)
 app.use(errorHandling);
-
-// Graceful shutdown handling
-const server = app.listen(port, () => {
-  console.log(`🚀 Ninety Minutes API server running on port ${port}`);
-  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 Health check: http://localhost:${port}/health`);
-  console.log(`📡 API base URL: http://localhost:${port}/api/v1`);
-  console.log(`📚 Available endpoints:`);
-  console.log(`   - Leagues: GET/POST /api/v1/leagues`);
-  console.log(`   - Teams: GET/POST /api/v1/teams`);
-  console.log(`   - Players: GET/POST /api/v1/players`);
-  console.log(`   - Matches: GET/POST /api/v1/matches`);
-});
 
 module.exports = app;

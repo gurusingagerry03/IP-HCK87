@@ -11,7 +11,6 @@ class playerController {
         data: players,
       });
     } catch (error) {
-      console.log(error);
       next(error);
     }
   }
@@ -57,7 +56,6 @@ class playerController {
         data: players,
       });
     } catch (error) {
-      console.log(error);
       next(error);
     }
   }

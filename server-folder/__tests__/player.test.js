@@ -531,4 +531,14 @@ describe('Player Controller', () => {
       expect(typeof Team.findByPk.mock.calls[0][0]).toBe('number');
     });
   });
+
+  // Clean up all mocks after all tests complete
+  afterAll(() => {
+    jest.restoreAllMocks();
+  });
+
+  // Clear mock calls after each test to prevent interference (already has beforeEach clearAllMocks)
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 });

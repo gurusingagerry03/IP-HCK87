@@ -21,8 +21,6 @@ class favoriteController {
         data: newFavorite,
       });
     } catch (error) {
-      console.log(error);
-
       next(error);
     }
   }

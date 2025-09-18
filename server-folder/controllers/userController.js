@@ -2,7 +2,7 @@ const { User } = require('../models');
 const { comparePasswords, hashPassword } = require('../helpers/bcrypt');
 const { generateToken } = require('../helpers/jwt');
 const { OAuth2Client } = require('google-auth-library');
-const { BadRequestError, UnauthorizedError } = require('../helpers/customErrors');
+const { BadRequestError, UnauthorizedError, NotFoundError } = require('../helpers/customErrors');
 
 class userController {
   static async googleLogin(req, res, next) {
@@ -28,7 +28,6 @@ class userController {
         },
         hooks: false,
       });
-      console.log(user, '<<< user google');
 
       return res.status(200).json({
         success: true,

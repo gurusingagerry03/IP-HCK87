@@ -1,0 +1,1128 @@
+const request = require('supertest');
+const express = require('express');
+const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const teamRoutes = require('../routes/teamRoutes');
+const teamController = require('../controllers/teamController');
+const { errorHandling } = require('../middlewares/errorHandling');
+
+// Set test environment
+process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = 'test-secret-key';
+
+// Mock external dependencies
+jest.mock('../helpers/http', () => ({
+  http: jest.fn(),
+}));
+
+jest.mock('../helpers/jwt', () => ({
+  verifyToken: jest.fn(),
+}));
+
+jest.mock('../helpers/aiGenerate', () => ({
+  generateAi: jest.fn(),
+}));
+
+// Mock cloudinary
+jest.mock('cloudinary', () => ({
+  v2: {
+    config: jest.fn(),
+    uploader: {
+      upload: jest.fn(),
+      destroy: jest.fn(),
+    },
+  },
+}));
+
+// Mock multer
+jest.mock('multer', () => {
+  const multer = () => ({
+    array: () => (req, res, next) => {
+      req.files = req.mockFiles || [];
+      next();
+    },
+  });
+  multer.memoryStorage = () => ({});
+  return multer;
+});
+
+// Mock models completely
+jest.mock('../models', () => ({
+  Team: {
+    findAll: jest.fn(),
+    findOne: jest.fn(),
+    findByPk: jest.fn(),
+    findAndCountAll: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    destroy: jest.fn(),
+    bulkCreate: jest.fn(),
+  },
+  League: {
+    findAll: jest.fn(),
+    findOne: jest.fn(),
+    findByPk: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    destroy: jest.fn(),
+  },
+  Player: {
+    findAll: jest.fn(),
+    findOne: jest.fn(),
+    findByPk: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    destroy: jest.fn(),
+    bulkCreate: jest.fn(),
+  },
+  User: {
+    findAll: jest.fn(),
+    findOne: jest.fn(),
+    findByPk: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    destroy: jest.fn(),
+  },
+  sequelize: {
+    authenticate: jest.fn().mockResolvedValue(true),
+    sync: jest.fn().mockResolvedValue(true),
+    close: jest.fn().mockResolvedValue(true),
+  },
+}));
+
+const { http } = require('../helpers/http');
+const { verifyToken } = require('../helpers/jwt');
+const { generateAi } = require('../helpers/aiGenerate');
+const cloudinary = require('cloudinary').v2;
+const { Team, League, Player, User } = require('../models');
+
+// Create express app for testing
+const app = express();
+app.use(express.json());
+app.use('/api/v1/teams', teamRoutes);
+app.use(errorHandling);
+
+describe('Team', () => {
+  let adminToken;
+  let userToken;
+  let mockTeam;
+  let mockLeague;
+  let mockPlayer;
+  let mockUser;
+  let mockAdminUser;
+
+  beforeAll(() => {
+    // Create mock JWT tokens
+    adminToken = jwt.sign({ id: 1, role: 'admin' }, process.env.JWT_SECRET || 'test-secret');
+    userToken = jwt.sign({ id: 2, role: 'user' }, process.env.JWT_SECRET || 'test-secret');
+  });
+
+  beforeEach(() => {
+    // Reset all mocks before each test
+    jest.clearAllMocks();
+
+    // Mock verifyToken
+    verifyToken.mockImplementation((token) => {
+      try {
+        // Try to decode the token to get the payload
+        const decoded = jwt.decode(token);
+        if (decoded && decoded.id && decoded.role) {
+          return decoded;
+        }
+      } catch (err) {
+        // If decoding fails, use the existing logic
+        if (token === adminToken.replace('Bearer ', '')) {
+          return { id: 1, role: 'admin' };
+        }
+        if (token === userToken.replace('Bearer ', '')) {
+          return { id: 2, role: 'user' };
+        }
+      }
+      throw new Error('Invalid token');
+    });
+
+    // Mock data - use string dates for JSON serialization
+    const now = new Date().toISOString();
+
+    mockLeague = {
+      id: 1,
+      name: 'Premier League',
+      country: 'England',
+      externalRef: 'PL001',
+      logoUrl: 'https://example.com/league-logo.png',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    mockTeam = {
+      id: 1,
+      leagueId: 1,
+      name: 'Manchester United',
+      logoUrl: 'https://example.com/team-logo.png',
+      foundedYear: 1878,
+      country: 'England',
+      stadiumName: 'Old Trafford',
+      stadiumCity: 'Manchester',
+      stadiumCapacity: 74310,
+      venueAddress: 'Sir Matt Busby Way, Old Trafford, Manchester M16 0RA',
+      externalRef: 'MU001',
+      description:
+        'Manchester United is a professional football club based in Manchester, England.',
+      lastSyncedAt: now,
+      coach: 'Erik ten Hag',
+      imgUrls: [],
+      createdAt: now,
+      updatedAt: now,
+      League: mockLeague,
+    };
+
+    mockPlayer = {
+      id: 1,
+      teamId: 1,
+      fullName: 'Marcus Rashford',
+      primaryPosition: 'Left Winger',
+      thumbUrl: 'https://example.com/player-thumb.png',
+      externalRef: 'MR001',
+      age: 26,
+      shirtNumber: '10',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    mockAdminUser = {
+      id: 1,
+      email: 'admin@test.com',
+      role: 'admin',
+    };
+
+    mockUser = {
+      id: 2,
+      email: 'user@test.com',
+      role: 'user',
+    };
+
+    // Mock User.findByPk for authentication middleware
+    User.findByPk = jest.fn().mockImplementation((id) => {
+      if (id === 1) return Promise.resolve(mockAdminUser);
+      if (id === 2) return Promise.resolve(mockUser);
+      return Promise.resolve(null);
+    });
+  });
+
+  describe('GET /api/v1/teams', () => {
+    it('should return all teams without pagination when no query params', async () => {
+      const mockTeams = [mockTeam];
+      const mockFindAndCountResult = {
+        count: 1,
+        rows: mockTeams,
+      };
+
+      Team.findAndCountAll = jest.fn().mockResolvedValue(mockFindAndCountResult);
+
+      const response = await request(app).get('/api/v1/teams').expect(200);
+
+      expect(response.body).toEqual({
+        data: mockTeams,
+        meta: {
+          page: 1,
+          totalPages: 1,
+          total: 1,
+          hasNext: false,
+          hasPrev: false,
+        },
+      });
+
+      expect(Team.findAndCountAll).toHaveBeenCalledWith({
+        where: {},
+        order: [['name', 'ASC']],
+        include: [
+          {
+            model: League,
+            attributes: ['id', 'name', 'country'],
+          },
+        ],
+      });
+    });
+
+    it('should return paginated teams when query params provided', async () => {
+      const mockTeams = [mockTeam];
+      const mockFindAndCountResult = {
+        count: 25,
+        rows: mockTeams,
+      };
+
+      Team.findAndCountAll = jest.fn().mockResolvedValue(mockFindAndCountResult);
+
+      const response = await request(app)
+        .get('/api/v1/teams?page[number]=1&page[size]=10')
+        .expect(200);
+
+      expect(response.body).toEqual({
+        data: mockTeams,
+        meta: {
+          page: 1,
+          totalPages: 3,
+          total: 25,
+          hasNext: true,
+          hasPrev: false,
+        },
+      });
+
+      expect(Team.findAndCountAll).toHaveBeenCalledWith({
+        where: {},
+        order: [['name', 'ASC']],
+        include: [
+          {
+            model: League,
+            attributes: ['id', 'name', 'country'],
+          },
+        ],
+        limit: 10,
+        offset: 0,
+      });
+    });
+
+    it('should filter teams by search query', async () => {
+      const mockTeams = [mockTeam];
+      const mockFindAndCountResult = {
+        count: 1,
+        rows: mockTeams,
+      };
+
+      Team.findAndCountAll = jest.fn().mockResolvedValue(mockFindAndCountResult);
+
+      const response = await request(app).get('/api/v1/teams?q=Manchester').expect(200);
+
+      expect(response.body.data).toEqual(mockTeams);
+      expect(Team.findAndCountAll).toHaveBeenCalledWith({
+        where: {
+          [require('sequelize').Op.or]: [
+            { name: { [require('sequelize').Op.iLike]: '%Manchester%' } },
+            { country: { [require('sequelize').Op.iLike]: '%Manchester%' } },
+          ],
+        },
+        order: [['name', 'ASC']],
+        include: [
+          {
+            model: League,
+            attributes: ['id', 'name', 'country'],
+          },
+        ],
+        limit: 10,
+        offset: 0,
+      });
+    });
+
+    it('should filter teams by country', async () => {
+      const mockTeams = [mockTeam];
+      const mockFindAndCountResult = {
+        count: 1,
+        rows: mockTeams,
+      };
+
+      Team.findAndCountAll = jest.fn().mockResolvedValue(mockFindAndCountResult);
+
+      const response = await request(app).get('/api/v1/teams?filter=England').expect(200);
+
+      expect(response.body.data).toEqual(mockTeams);
+      expect(Team.findAndCountAll).toHaveBeenCalledWith({
+        where: {
+          country: { [require('sequelize').Op.iLike]: '%England%' },
+        },
+        order: [['name', 'ASC']],
+        include: [
+          {
+            model: League,
+            attributes: ['id', 'name', 'country'],
+          },
+        ],
+        limit: 10,
+        offset: 0,
+      });
+    });
+
+    it('should handle empty result', async () => {
+      const mockFindAndCountResult = {
+        count: 0,
+        rows: [],
+      };
+
+      Team.findAndCountAll = jest.fn().mockResolvedValue(mockFindAndCountResult);
+
+      const response = await request(app).get('/api/v1/teams').expect(200);
+
+      expect(response.body).toEqual({
+        data: [],
+        meta: {
+          page: 1,
+          totalPages: 1,
+          total: 0,
+          hasNext: false,
+          hasPrev: false,
+        },
+      });
+    });
+
+    it('should handle database error', async () => {
+      Team.findAndCountAll = jest.fn().mockRejectedValue(new Error('Database error'));
+
+      const response = await request(app).get('/api/v1/teams').expect(500);
+
+      expect(response.body).toHaveProperty('message', 'internal server error');
+    });
+
+    it('should limit page size to maximum 50', async () => {
+      const mockFindAndCountResult = {
+        count: 100,
+        rows: [],
+      };
+
+      Team.findAndCountAll = jest.fn().mockResolvedValue(mockFindAndCountResult);
+
+      await request(app).get('/api/v1/teams?page[size]=100').expect(200);
+
+      expect(Team.findAndCountAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          limit: 50, // Should be capped at 50
+        })
+      );
+    });
+  });
+
+  describe('GET /api/v1/teams/:id', () => {
+    it('should return team by id successfully', async () => {
+      const teamWithRelations = {
+        ...mockTeam,
+        League: mockLeague,
+        Players: [mockPlayer],
+      };
+
+      Team.findByPk = jest.fn().mockResolvedValue(teamWithRelations);
+
+      const response = await request(app).get('/api/v1/teams/1').expect(200);
+
+      expect(response.body).toEqual(teamWithRelations);
+      expect(Team.findByPk).toHaveBeenCalledWith(1, {
+        include: [
+          {
+            model: League,
+          },
+          {
+            model: Player,
+          },
+        ],
+      });
+    });
+
+    it('should return 400 for invalid id (non-numeric)', async () => {
+      const response = await request(app).get('/api/v1/teams/abc').expect(400);
+
+      expect(response.body).toHaveProperty('message', 'Team ID must be a positive number');
+    });
+
+    it('should return 400 for invalid id (zero)', async () => {
+      const response = await request(app).get('/api/v1/teams/0').expect(400);
+
+      expect(response.body).toHaveProperty('message', 'Team ID must be a positive number');
+    });
+
+    it('should return 400 for invalid id (negative)', async () => {
+      const response = await request(app).get('/api/v1/teams/-1').expect(400);
+
+      expect(response.body).toHaveProperty('message', 'Team ID must be a positive number');
+    });
+
+    it('should return 404 when team not found', async () => {
+      Team.findByPk = jest.fn().mockResolvedValue(null);
+
+      const response = await request(app).get('/api/v1/teams/999').expect(404);
+
+      expect(response.body).toHaveProperty('message', 'Team with ID 999 not found');
+    });
+
+    it('should handle database error', async () => {
+      Team.findByPk = jest.fn().mockRejectedValue(new Error('Database error'));
+
+      const response = await request(app).get('/api/v1/teams/1').expect(500);
+
+      expect(response.body).toHaveProperty('message', 'internal server error');
+    });
+  });
+
+  describe('POST /api/v1/teams/sync/:leagueId', () => {
+    it('should sync teams successfully with admin token', async () => {
+      const mockApiResponse = {
+        data: [
+          {
+            team_key: 'MU001',
+            team_name: 'Manchester United',
+            team_badge: 'https://example.com/logo.png',
+            team_founded: '1878',
+            team_country: 'England',
+            venue: {
+              venue_name: 'Old Trafford',
+              venue_city: 'Manchester',
+              venue_address: 'Sir Matt Busby Way',
+              venue_capacity: '74310',
+            },
+            coaches: [{ coach_name: 'Erik ten Hag' }],
+            players: [
+              {
+                player_id: 'MR001',
+                player_name: 'Marcus Rashford',
+                player_type: 'Forward',
+                player_image: 'https://example.com/player.png',
+                player_age: '26',
+                player_number: '10',
+              },
+            ],
+          },
+        ],
+      };
+
+      League.findByPk = jest.fn().mockResolvedValue(mockLeague);
+      http.mockResolvedValue(mockApiResponse);
+      Team.bulkCreate = jest
+        .fn()
+        .mockResolvedValue([{ ...mockTeam, _options: { isNewRecord: true } }]);
+      Player.bulkCreate = jest
+        .fn()
+        .mockResolvedValue([{ ...mockPlayer, _options: { isNewRecord: true } }]);
+
+      const response = await request(app)
+        .post('/api/v1/teams/sync/1')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body).toEqual({
+        success: true,
+        data: {
+          totalTeam: 1,
+          totalPlayer: 1,
+          errors: [],
+        },
+        message: 'Teams and players synchronization completed',
+      });
+
+      expect(League.findByPk).toHaveBeenCalledWith('1');
+      expect(http).toHaveBeenCalled();
+      expect(Team.bulkCreate).toHaveBeenCalled();
+      expect(Player.bulkCreate).toHaveBeenCalled();
+    });
+
+    it('should return 401 without token', async () => {
+      const response = await request(app).post('/api/v1/teams/sync/1').expect(401);
+
+      expect(response.body).toHaveProperty('message', 'invalid token');
+    });
+
+    it('should return 401 with user token (not admin)', async () => {
+      const response = await request(app)
+        .post('/api/v1/teams/sync/1')
+        .set('Authorization', `Bearer ${userToken}`)
+        .expect(401);
+
+      expect(response.body).toHaveProperty('message', 'Admin access required');
+    });
+
+    it('should return 400 when league not found', async () => {
+      League.findByPk = jest.fn().mockResolvedValue(null);
+
+      const response = await request(app)
+        .post('/api/v1/teams/sync/999')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(404);
+
+      expect(response.body).toHaveProperty('message', 'League not found');
+    });
+
+    it('should return 400 when external API fails', async () => {
+      League.findByPk = jest.fn().mockResolvedValue(mockLeague);
+      http.mockRejectedValue(new Error('API connection failed'));
+
+      const response = await request(app)
+        .post('/api/v1/teams/sync/1')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body).toHaveProperty('message', 'Failed to connect to external team API');
+    });
+
+    it('should return 400 when external API returns invalid data', async () => {
+      League.findByPk = jest.fn().mockResolvedValue(mockLeague);
+      http.mockResolvedValue({ data: null });
+
+      const response = await request(app)
+        .post('/api/v1/teams/sync/1')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body).toHaveProperty('message', 'Invalid response from external API');
+    });
+
+    it('should handle bulk create errors in sync', async () => {
+      // Test untuk cover error handling pada lines 335-336
+      League.findByPk = jest.fn().mockResolvedValue(mockLeague);
+      http.mockResolvedValue({ 
+        data: [
+          {
+            team: {
+              id: 1,
+              name: 'Test Team',
+              logo: 'test-logo.png',
+              founded: 2000,
+              country: 'Test Country',
+              venue: {
+                name: 'Test Stadium',
+                address: 'Test Address',
+                city: 'Test City',
+                capacity: 50000
+              }
+            }
+          }
+        ]
+      });
+      
+      // Mock bulk create to fail
+      Team.bulkCreate = jest.fn().mockRejectedValue(new Error('Bulk create failed'));
+
+      const response = await request(app)
+        .post('/api/v1/teams/sync/1')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(500);
+    });
+
+    it('should handle database error during sync', async () => {
+      // Test untuk cover error handling umum pada line 409
+      League.findByPk = jest.fn().mockRejectedValue(new Error('Database connection failed'));
+
+      const response = await request(app)
+        .post('/api/v1/teams/sync/1')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(500);
+    });
+  });
+
+  describe('PATCH /api/v1/teams/generate-descriptions/:id', () => {
+    it('should generate team description successfully', async () => {
+      const teamWithoutDescription = { ...mockTeam, description: null };
+      Team.findByPk = jest.fn().mockResolvedValue(teamWithoutDescription);
+      Team.update = jest.fn().mockResolvedValue([1]);
+      generateAi.mockResolvedValue('Generated description for Manchester United.');
+
+      const response = await request(app)
+        .patch('/api/v1/teams/generate-descriptions/1')
+        .expect(200);
+
+      expect(response.body).toEqual({
+        message: 'Team description updated successfully',
+      });
+
+      expect(generateAi).toHaveBeenCalled();
+      expect(Team.update).toHaveBeenCalledWith(
+        { description: 'Generated description for Manchester United.' },
+        { where: { id: '1' } }
+      );
+    });
+
+    it('should skip generation if description already exists', async () => {
+      Team.findByPk = jest.fn().mockResolvedValue(mockTeam);
+
+      const response = await request(app)
+        .patch('/api/v1/teams/generate-descriptions/1')
+        .expect(200);
+
+      expect(response.body).toEqual({
+        message: 'Team description already exists, skipping regeneration',
+      });
+
+      expect(generateAi).not.toHaveBeenCalled();
+      expect(Team.update).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 for invalid team id', async () => {
+      const response = await request(app)
+        .patch('/api/v1/teams/generate-descriptions/abc')
+        .expect(400);
+
+      expect(response.body).toHaveProperty('message', 'Team ID must be a positive number');
+    });
+
+    it('should return 404 when team not found', async () => {
+      Team.findByPk = jest.fn().mockResolvedValue(null);
+
+      const response = await request(app)
+        .patch('/api/v1/teams/generate-descriptions/999')
+        .expect(404);
+
+      expect(response.body).toHaveProperty('message', 'Team with ID 999 not found');
+    });
+  });
+
+  describe('PATCH /api/v1/teams/img-url/:id', () => {
+    beforeEach(() => {
+      cloudinary.uploader.upload.mockResolvedValue({
+        secure_url: 'https://cloudinary.com/image.jpg',
+        public_id: 'FOOTBALL_DB/team-images/test123',
+      });
+    });
+
+    it('should upload team images successfully with admin token', async () => {
+      const mockFiles = [
+        {
+          buffer: Buffer.from('test image'),
+          mimetype: 'image/jpeg',
+        },
+      ];
+
+      Team.findByPk = jest.fn().mockResolvedValue(mockTeam);
+
+      const response = await request(app)
+        .patch('/api/v1/teams/img-url/1')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .field('test', 'test')
+        .attach('images', Buffer.from('test'), 'test.jpg');
+
+      // Mock the files manually since we can't actually upload in tests
+      const req = { files: mockFiles };
+      await new Promise((resolve) => {
+        teamRoutes.stack
+          .find((layer) => layer.route.path === '/img-url/:id')
+          .route.stack.find((layer) => layer.method === 'patch')
+          .handle({ ...req, params: { id: '1' }, user: mockAdminUser }, {}, resolve);
+      });
+
+      expect(Team.findByPk).toHaveBeenCalledWith('1');
+    });
+
+    it('should return 401 without token', async () => {
+      const response = await request(app).patch('/api/v1/teams/img-url/1').expect(401);
+
+      expect(response.body).toHaveProperty('message', 'invalid token');
+    });
+
+    it('should return 401 with user token (not admin)', async () => {
+      const response = await request(app)
+        .patch('/api/v1/teams/img-url/1')
+        .set('Authorization', `Bearer ${userToken}`)
+        .expect(401);
+
+      expect(response.body).toHaveProperty('message', 'Admin access required');
+    });
+  });
+
+  describe('DELETE /api/v1/teams/img-url/:id/:imageIndex', () => {
+    it('should return 401 without token', async () => {
+      const response = await request(app).delete('/api/v1/teams/img-url/1/0').expect(401);
+
+      expect(response.body).toHaveProperty('message', 'invalid token');
+    });
+
+    it('should return 401 with user token (not admin)', async () => {
+      const response = await request(app)
+        .delete('/api/v1/teams/img-url/1/0')
+        .set('Authorization', `Bearer ${userToken}`)
+        .expect(401);
+
+      expect(response.body).toHaveProperty('message', 'Admin access required');
+    });
+  });
+
+  describe('Edge Cases and Error Handling', () => {
+    it('should handle very large page numbers', async () => {
+      const mockFindAndCountResult = {
+        count: 10,
+        rows: [],
+      };
+
+      Team.findAndCountAll = jest.fn().mockResolvedValue(mockFindAndCountResult);
+
+      const response = await request(app).get('/api/v1/teams?page[number]=999').expect(200);
+
+      expect(response.body.meta.page).toBe(999);
+      expect(response.body.meta.hasNext).toBe(false);
+      expect(response.body.meta.hasPrev).toBe(true);
+    });
+
+    it('should handle complex search and filter combinations', async () => {
+      const mockFindAndCountResult = {
+        count: 5,
+        rows: [mockTeam],
+      };
+
+      Team.findAndCountAll = jest.fn().mockResolvedValue(mockFindAndCountResult);
+
+      const response = await request(app)
+        .get(
+          '/api/v1/teams?q=Manchester&filter=England&sort=foundedYear&page[number]=1&page[size]=5'
+        )
+        .expect(200);
+
+      expect(response.body.data).toEqual([mockTeam]);
+      expect(Team.findAndCountAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            country: { [require('sequelize').Op.iLike]: '%England%' },
+            [require('sequelize').Op.or]: [
+              { name: { [require('sequelize').Op.iLike]: '%Manchester%' } },
+              { country: { [require('sequelize').Op.iLike]: '%Manchester%' } },
+            ],
+          },
+          order: [['foundedYear', 'ASC']],
+        })
+      );
+    });
+
+    it('should handle SQL injection attempts in search', async () => {
+      const mockFindAndCountResult = {
+        count: 0,
+        rows: [],
+      };
+
+      Team.findAndCountAll = jest.fn().mockResolvedValue(mockFindAndCountResult);
+
+      const response = await request(app)
+        .get("/api/v1/teams?q='; DROP TABLE teams; --")
+        .expect(200);
+
+      expect(response.body.data).toEqual([]);
+      // Should not crash and handle safely
+    });
+  });
+
+  describe('PATCH /api/v1/teams/img-url/:id', () => {
+    it('should upload images successfully', async () => {
+      const mockFiles = [
+        { buffer: Buffer.from('fake image 1'), originalname: 'image1.jpg', mimetype: 'image/jpeg' },
+        { buffer: Buffer.from('fake image 2'), originalname: 'image2.jpg', mimetype: 'image/jpeg' }
+      ];
+
+      const mockTeam = {
+        id: 1,
+        name: 'Manchester United',
+        imgUrls: [],
+        update: jest.fn().mockResolvedValue({
+          id: 1,
+          imgUrls: [
+            { url: 'http://cloudinary.com/img1.jpg', public_id: 'img1' },
+            { url: 'http://cloudinary.com/img2.jpg', public_id: 'img2' },
+          ]
+        })
+      };
+
+      Team.findByPk.mockResolvedValue(mockTeam);
+      cloudinary.uploader.upload
+        .mockResolvedValueOnce({ secure_url: 'http://cloudinary.com/img1.jpg', public_id: 'img1' })
+        .mockResolvedValueOnce({ secure_url: 'http://cloudinary.com/img2.jpg', public_id: 'img2' });
+
+      // Mock req, res, next for direct controller test
+      const mockReq = {
+        params: { id: '1' },
+        files: mockFiles,
+        user: { id: 1, role: 'admin' }
+      };
+      const mockRes = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      };
+      const mockNext = jest.fn();
+
+      await teamController.uploadImageUrlTeam(mockReq, mockRes, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: true,
+        message: 'Successfully uploaded 2 images',
+        data: {
+          teamId: 1,
+          teamName: 'Manchester United',
+          totalImages: 2,
+          newImages: [
+            { url: 'http://cloudinary.com/img1.jpg', public_id: 'img1' },
+            { url: 'http://cloudinary.com/img2.jpg', public_id: 'img2' },
+          ]
+        }
+      });
+      expect(mockTeam.update).toHaveBeenCalledWith({
+        imgUrls: [
+          { url: 'http://cloudinary.com/img1.jpg', public_id: 'img1' },
+          { url: 'http://cloudinary.com/img2.jpg', public_id: 'img2' },
+        ],
+      });
+    });
+
+    it('should return 404 when team not found for upload', async () => {
+
+      Team.findByPk.mockResolvedValue(null);
+
+      const response = await request(app)
+        .patch('/api/v1/teams/img-url/999')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(404);
+    });
+
+    it('should return 400 when no images provided', async () => {
+
+      Team.findByPk.mockResolvedValue({ id: 1, imgUrls: [] });
+
+      // Send request with no files attached
+      const response = await request(app)
+        .patch('/api/v1/teams/img-url/1')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should return 400 when exceeding maximum images limit', async () => {
+
+
+      const mockTeam = {
+        id: 1,
+        imgUrls: [
+          { url: 'img1.jpg', public_id: 'id1' },
+          { url: 'img2.jpg', public_id: 'id2' },
+          { url: 'img3.jpg', public_id: 'id3' },
+          { url: 'img4.jpg', public_id: 'id4' },
+        ],
+      };
+
+      Team.findByPk.mockResolvedValue(mockTeam);
+
+      // Try to upload one more image when already at limit (4)
+      const response = await request(app)
+        .patch('/api/v1/teams/img-url/1')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .attach('images', Buffer.from('fake image'), 'image.jpg');
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should handle cloudinary upload error', async () => {
+      // Test untuk cover error handling pada line 82
+      const mockTeam = {
+        id: 1,
+        imgUrls: [],
+        update: jest.fn(),
+      };
+
+      Team.findByPk.mockResolvedValue(mockTeam);
+      cloudinary.uploader.upload.mockRejectedValue(new Error('Cloudinary upload failed'));
+
+      const response = await request(app)
+        .patch('/api/v1/teams/img-url/1')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .attach('images', Buffer.from('fake image'), 'image.jpg');
+
+      expect(response.status).toBe(500);
+    });
+  });
+
+  describe('DELETE /api/v1/teams/img-url/:id/:imageIndex', () => {
+    it('should delete image successfully', async () => {
+
+
+      const mockTeam = {
+        id: 1,
+        name: 'Manchester United',
+        imgUrls: [
+          { url: 'http://cloudinary.com/img1.jpg', public_id: 'img1' },
+          { url: 'http://cloudinary.com/img2.jpg', public_id: 'img2' },
+        ],
+        update: jest.fn().mockResolvedValue(true),
+      };
+
+      Team.findByPk.mockResolvedValue(mockTeam);
+      cloudinary.uploader.destroy.mockResolvedValue({ result: 'ok' });
+
+      const response = await request(app)
+        .delete('/api/v1/teams/img-url/1/0')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Image deleted successfully');
+    });
+
+    it('should return 404 when team not found for delete image', async () => {
+      
+
+
+      Team.findByPk.mockResolvedValue(null);
+
+      const response = await request(app)
+        .delete('/api/v1/teams/img-url/999/0')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(404);
+    });
+
+    it('should return 400 when team has no images to delete', async () => {
+      
+
+
+      Team.findByPk.mockResolvedValue({ id: 1, imgUrls: [] });
+
+      const response = await request(app)
+        .delete('/api/v1/teams/img-url/1/0')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe('Team has no images to delete');
+    });
+
+    it('should return 400 for invalid image index', async () => {
+      
+
+
+
+      const mockTeam = {
+        id: 1,
+        imgUrls: [{ url: 'img1.jpg', public_id: 'id1' }],
+      };
+
+      Team.findByPk.mockResolvedValue(mockTeam);
+
+      const response = await request(app)
+        .delete('/api/v1/teams/img-url/1/5')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe('Invalid image index');
+    });
+
+    it('should handle cloudinary deletion error gracefully', async () => {
+      
+
+
+
+      const mockTeam = {
+        id: 1,
+        name: 'Manchester United',
+        imgUrls: [{ url: 'http://cloudinary.com/img1.jpg', public_id: 'img1' }],
+        update: jest.fn().mockResolvedValue(true),
+      };
+
+      Team.findByPk.mockResolvedValue(mockTeam);
+      cloudinary.uploader.destroy.mockRejectedValue(new Error('Cloudinary error'));
+
+      const response = await request(app)
+        .delete('/api/v1/teams/img-url/1/0')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+    });
+  });
+
+  describe('PATCH /api/v1/teams/generate-descriptions/:id', () => {
+    it('should update team description successfully', async () => {
+      
+
+
+
+      const mockTeam = {
+        id: 1,
+        name: 'Manchester United',
+        country: 'England',
+        foundedYear: 1878,
+        coach: 'Erik ten Hag',
+        description: null,
+      };
+
+      Team.findByPk.mockResolvedValue(mockTeam);
+      generateAi.mockResolvedValue('Generated team description');
+      Team.update.mockResolvedValue([1]);
+
+      const response = await request(app)
+        .patch('/api/v1/teams/generate-descriptions/1')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Team description updated successfully');
+    });
+
+    it('should return 400 for invalid team ID in description update', async () => {
+      
+
+
+
+      const response = await request(app)
+        .patch('/api/v1/teams/generate-descriptions/invalid')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe('Team ID must be a positive number');
+    });
+
+    it('should return 404 when team not found for description update', async () => {
+      
+
+
+      Team.findByPk.mockResolvedValue(null);
+
+      const response = await request(app)
+        .patch('/api/v1/teams/generate-descriptions/999')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(404);
+      expect(response.body.message).toBe('Team with ID 999 not found');
+    });
+
+    it('should skip generation when description already exists', async () => {
+      
+
+
+
+      const mockTeam = {
+        id: 1,
+        description: 'Existing description',
+      };
+
+      Team.findByPk.mockResolvedValue(mockTeam);
+
+      const response = await request(app)
+        .patch('/api/v1/teams/generate-descriptions/1')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Team description already exists, skipping regeneration');
+    });
+
+    it('should handle AI service error in description update', async () => {
+      
+
+
+
+      const mockTeam = {
+        id: 1,
+        name: 'Manchester United',
+        country: 'England',
+        foundedYear: 1878,
+        coach: 'Erik ten Hag',
+        description: null,
+      };
+
+      Team.findByPk.mockResolvedValue(mockTeam);
+      generateAi.mockRejectedValue(new Error('AI service error'));
+
+      const response = await request(app)
+        .patch('/api/v1/teams/generate-descriptions/1')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(500);
+    });
+  });
+
+  // Clean up all mocks after all tests complete
+  afterAll(() => {
+    jest.restoreAllMocks();
+  });
+
+  // Clear mock calls after each test to prevent interference
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+});

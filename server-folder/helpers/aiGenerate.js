@@ -7,7 +7,7 @@ async function generateAi(promptText, model) {
     contents: ` ${promptText}`,
   });
 
-  return response.text;
+  return response?.text || '';
 }
 
 module.exports = { generateAi };

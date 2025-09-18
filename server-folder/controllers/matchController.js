@@ -77,8 +77,6 @@ class matchController {
         mesage: 'Successfully updated match preview and prediction',
       });
     } catch (error) {
-      console.log(error);
-
       next(error);
     }
   }
@@ -140,8 +138,6 @@ class matchController {
         mesage: 'Successfully updated match analysis',
       });
     } catch (error) {
-      console.log(error);
-
       next(error);
     }
   }
@@ -210,7 +206,6 @@ class matchController {
             [Op.between]: [startOfDay, endOfDay],
           };
         } catch (dateError) {
-          console.error('Date parsing error:', dateError);
           throw new BadRequestError('Invalid date format. Expected MM/DD/YYYY');
         }
       }
@@ -312,7 +307,6 @@ class matchController {
         },
       });
     } catch (error) {
-      console.log(error);
       next(error);
     }
   }
@@ -348,7 +342,6 @@ class matchController {
         message: `Successfully retrieved match with ID ${matchId}`,
       });
     } catch (error) {
-      console.log(error);
       next(error);
     }
   }
@@ -452,7 +445,6 @@ class matchController {
           syncResults.matchesUpdated = matchResults.length - syncResults.matchesAdded;
         }
       } catch (bulkError) {
-        console.error('Bulk matches sync error:', bulkError);
         syncResults.errors.push(`Bulk operation failed: ${bulkError.message}`);
       }
 

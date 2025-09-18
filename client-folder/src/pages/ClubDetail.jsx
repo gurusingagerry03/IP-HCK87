@@ -17,12 +17,27 @@ export default function ClubDetail() {
   const [isAddingFavorite, setIsAddingFavorite] = useState(false);
   const [isTabsSticky, setIsTabsSticky] = useState(false);
 
-  // Fixed carousel images for all clubs
-  const heroImages = [
-    'https://img.chelseafc.com/image/upload/f_auto,w_1440,c_fill,g_faces,q_90/galleries/champions-league-final-2021/CL-final-team-shot.jpg',
-    'https://images.unsplash.com/photo-1642763907630-17bad0853f15?q=80&w=1074&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-    'https://images.unsplash.com/photo-1667983088885-226788e18a6e?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+  // Default images to use when team doesn't have imgUrls
+  const defaultImages = [
+    'https://storage.googleapis.com/data.ayo.co.id/photos/77445/SEO%20HDI%204/86.%20Faktor-faktor%20yang%20Mempengaruhi%20Kondisi%20Ideal%20Lapangan%20Sepakbola.jpg',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ1Q6TQbr-7AWK4EiLK9Tqg_9zEAMAzj_ti0g&s',
+    'https://www.beritaibukota.com/wp-content/uploads/2022/03/stadion-zaha-3.jpg',
   ];
+
+  // Use team's imgUrls if available, otherwise use default images
+  const heroImages = (() => {
+    if (club?.imgUrls) {
+      try {
+        const parsedImgUrls = typeof club.imgUrls === 'string' ? JSON.parse(club.imgUrls) : club.imgUrls;
+        if (Array.isArray(parsedImgUrls) && parsedImgUrls.length > 0) {
+          return parsedImgUrls.map(img => img.url);
+        }
+      } catch (error) {
+        console.error('Error parsing imgUrls:', error);
+      }
+    }
+    return defaultImages;
+  })();
 
   const [slide, setSlide] = useState(0);
 

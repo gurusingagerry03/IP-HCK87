@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const matchController = require('../controllers/matchController');
-const { authenticate } = require('../middlewares/authenticate');
+const authenticate = require('../middlewares/authenticate');
 const adminOnly = require('../middlewares/adminOnly');
 
 // Keep only endpoints that client uses

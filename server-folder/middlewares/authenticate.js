@@ -4,7 +4,6 @@ const { User } = require('../models');
 const authenticate = async (req, res, next) => {
   try {
     const bearerToken = req.headers.authorization;
-    console.log(bearerToken, '<< ini bearer token');
 
     if (!bearerToken) {
       throw { name: 'JsonWebTokenError' };
@@ -22,5 +21,4 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-module.exports = { authenticate };
-// --- IGNORE ---
+module.exports = authenticate;

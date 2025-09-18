@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const leagueController = require('../controllers/leagueController');
-const { authenticate } = require('../middlewares/authenticate');
+const authenticate = require('../middlewares/authenticate');
 const adminOnly = require('../middlewares/adminOnly');
 
 router.get('/', leagueController.getAllLeagues);

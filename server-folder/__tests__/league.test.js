@@ -516,4 +516,14 @@ describe('League', () => {
       expect(response.body).toHaveProperty('message', 'internal server error');
     });
   });
+
+  // Clean up all mocks after all tests complete
+  afterAll(() => {
+    jest.restoreAllMocks();
+  });
+
+  // Clear mock calls after each test to prevent interference
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 });

@@ -16,7 +16,7 @@ class teamController {
       const { id } = req.params;
       const files = req.files; // Now we get array of files
 
-      // Validate tea m exists
+      // Validate team exists
       const team = await Team.findByPk(id);
       if (!team) {
         return res.status(404).json({
@@ -24,7 +24,6 @@ class teamController {
           message: 'Team not found',
         });
       }
-      console.log(team);
 
       // Check if files are provided
       if (!files || files.length === 0) {
@@ -80,7 +79,6 @@ class teamController {
         },
       });
     } catch (error) {
-      console.log(error);
       next(error);
     }
   }
@@ -197,7 +195,6 @@ class teamController {
 
       res.status(200).json(team);
     } catch (error) {
-      console.log(error);
       next(error);
     }
   }
@@ -345,7 +342,6 @@ class teamController {
         message: 'Teams and players synchronization completed',
       });
     } catch (error) {
-      console.log(error);
       next(error);
     }
   }
@@ -389,7 +385,7 @@ class teamController {
         try {
           await cloudinary.uploader.destroy(imageToDelete.public_id);
         } catch (cloudinaryError) {
-          console.log('Cloudinary deletion error:', cloudinaryError);
+          // Cloudinary deletion failed but continue with database update
         }
       }
 
@@ -410,7 +406,6 @@ class teamController {
         },
       });
     } catch (error) {
-      console.log(error);
       next(error);
     }
   }
@@ -454,8 +449,6 @@ class teamController {
         message: 'Team description updated successfully',
       });
     } catch (error) {
-      console.log(error, '<<< error generate description');
-
       next(error);
     }
   }
