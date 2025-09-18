@@ -18,7 +18,7 @@ describe('AI Generate Helper Tests', () => {
   beforeEach(() => {
     // Clear all mocks before each test
     jest.clearAllMocks();
-    
+
     // Create a fresh mock for generateContent
     mockGenerateContent = jest.fn();
     GoogleGenAI.mockImplementation(() => ({
@@ -46,7 +46,7 @@ describe('AI Generate Helper Tests', () => {
     it('should handle different prompts and models', async () => {
       const expectedText1 = 'Response to first prompt';
       const expectedText2 = 'Response to second prompt';
-      
+
       mockGenerateContent
         .mockResolvedValueOnce({ text: expectedText1 })
         .mockResolvedValueOnce({ text: expectedText2 });
@@ -84,7 +84,7 @@ describe('AI Generate Helper Tests', () => {
       const longPrompt =
         'This is a very long prompt text that should be handled correctly by the AI service and should not cause any issues with processing or memory usage or any other problems that might occur when dealing with large text inputs';
       const expectedText = 'Response to long prompt';
-      
+
       mockGenerateContent.mockResolvedValue({ text: expectedText });
 
       const result = await generateAi(longPrompt, 'test-model');
@@ -108,9 +108,9 @@ describe('AI Generate Helper Tests', () => {
     });
 
     it('should return response text property', async () => {
-      const mockResponse = { 
+      const mockResponse = {
         text: 'AI generated text',
-        otherProperty: 'should be ignored'
+        otherProperty: 'should be ignored',
       };
       mockGenerateContent.mockResolvedValue(mockResponse);
 

@@ -181,8 +181,8 @@ describe('HTTP Helper', () => {
   describe('HTTP Methods Availability', () => {
     it('should have all standard HTTP methods available', () => {
       const standardMethods = ['get', 'post', 'put', 'delete', 'request'];
-      
-      standardMethods.forEach(method => {
+
+      standardMethods.forEach((method) => {
         expect(http[method]).toBeDefined();
         expect(typeof http[method]).toBe('function');
       });

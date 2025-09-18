@@ -75,7 +75,7 @@ describe('Error Handling Middleware', () => {
       const response = await request(app).get('/test-jwt-error').expect(401);
 
       expect(response.body).toEqual({
-        message: 'invalid token'
+        message: 'invalid token',
       });
     });
 
@@ -90,7 +90,7 @@ describe('Error Handling Middleware', () => {
       const response = await request(app).get('/test-token-expired').expect(401);
 
       expect(response.body).toEqual({
-        message: 'invalid token'
+        message: 'invalid token',
       });
     });
   });
@@ -107,7 +107,7 @@ describe('Error Handling Middleware', () => {
       const response = await request(app).get('/test-forbidden-access').expect(403);
 
       expect(response.body).toEqual({
-        message: 'Forbidden Access'
+        message: 'Forbidden Access',
       });
     });
 
@@ -122,7 +122,7 @@ describe('Error Handling Middleware', () => {
       const response = await request(app).get('/test-not-found').expect(404);
 
       expect(response.body).toEqual({
-        message: 'Resource not found'
+        message: 'Resource not found',
       });
     });
 
@@ -137,7 +137,7 @@ describe('Error Handling Middleware', () => {
       const response = await request(app).get('/test-bad-request').expect(400);
 
       expect(response.body).toEqual({
-        message: 'Test bad request'
+        message: 'Test bad request',
       });
     });
 
@@ -152,7 +152,7 @@ describe('Error Handling Middleware', () => {
       const response = await request(app).get('/test-unauthorized').expect(401);
 
       expect(response.body).toEqual({
-        message: 'Unauthorized access'
+        message: 'Unauthorized access',
       });
     });
 
@@ -167,7 +167,7 @@ describe('Error Handling Middleware', () => {
       const response = await request(app).get('/test-unauthorized-default').expect(401);
 
       expect(response.body).toEqual({
-        message: 'Authentication required'
+        message: 'Authentication required',
       });
     });
 
@@ -182,7 +182,7 @@ describe('Error Handling Middleware', () => {
       const response = await request(app).get('/test-forbidden').expect(403);
 
       expect(response.body).toEqual({
-        message: 'Access denied'
+        message: 'Access denied',
       });
     });
 
@@ -197,7 +197,7 @@ describe('Error Handling Middleware', () => {
       const response = await request(app).get('/test-forbidden-default').expect(403);
 
       expect(response.body).toEqual({
-        message: 'Access denied'
+        message: 'Access denied',
       });
     });
 
@@ -212,7 +212,7 @@ describe('Error Handling Middleware', () => {
       const response = await request(app).get('/test-conflict').expect(409);
 
       expect(response.body).toEqual({
-        message: 'Resource conflict'
+        message: 'Resource conflict',
       });
     });
 
@@ -227,7 +227,7 @@ describe('Error Handling Middleware', () => {
       const response = await request(app).get('/test-conflict-default').expect(409);
 
       expect(response.body).toEqual({
-        message: 'Resource conflict'
+        message: 'Resource conflict',
       });
     });
 
@@ -242,7 +242,7 @@ describe('Error Handling Middleware', () => {
       const response = await request(app).get('/test-invalid-credentials').expect(401);
 
       expect(response.body).toEqual({
-        message: 'Invalid email or password'
+        message: 'Invalid email or password',
       });
     });
   });
@@ -258,7 +258,7 @@ describe('Error Handling Middleware', () => {
       const response = await request(app).get('/test-generic-error').expect(500);
 
       expect(response.body).toEqual({
-        message: 'internal server error'
+        message: 'internal server error',
       });
     });
 
@@ -273,7 +273,7 @@ describe('Error Handling Middleware', () => {
       const response = await request(app).get('/test-unknown-error').expect(500);
 
       expect(response.body).toEqual({
-        message: 'internal server error'
+        message: 'internal server error',
       });
     });
 
@@ -288,7 +288,7 @@ describe('Error Handling Middleware', () => {
       const response = await request(app).get('/test-error-no-name').expect(500);
 
       expect(response.body).toEqual({
-        message: 'internal server error'
+        message: 'internal server error',
       });
     });
   });
@@ -307,7 +307,7 @@ describe('Error Handling Middleware', () => {
 
       expect(response.body).toEqual({
         message: 'Validation error',
-        errors: []
+        errors: [],
       });
     });
 
@@ -324,7 +324,7 @@ describe('Error Handling Middleware', () => {
 
       expect(response.body).toEqual({
         message: 'Validation error',
-        errors: []
+        errors: [],
       });
     });
 

@@ -563,7 +563,7 @@ describe('Team', () => {
     it('should handle bulk create errors in sync', async () => {
       // Test untuk cover error handling pada lines 335-336
       League.findByPk = jest.fn().mockResolvedValue(mockLeague);
-      http.mockResolvedValue({ 
+      http.mockResolvedValue({
         data: [
           {
             team: {
@@ -576,13 +576,13 @@ describe('Team', () => {
                 name: 'Test Stadium',
                 address: 'Test Address',
                 city: 'Test City',
-                capacity: 50000
-              }
-            }
-          }
-        ]
+                capacity: 50000,
+              },
+            },
+          },
+        ],
       });
-      
+
       // Mock bulk create to fail
       Team.bulkCreate = jest.fn().mockRejectedValue(new Error('Bulk create failed'));
 
@@ -796,7 +796,7 @@ describe('Team', () => {
     it('should upload images successfully', async () => {
       const mockFiles = [
         { buffer: Buffer.from('fake image 1'), originalname: 'image1.jpg', mimetype: 'image/jpeg' },
-        { buffer: Buffer.from('fake image 2'), originalname: 'image2.jpg', mimetype: 'image/jpeg' }
+        { buffer: Buffer.from('fake image 2'), originalname: 'image2.jpg', mimetype: 'image/jpeg' },
       ];
 
       const mockTeam = {
@@ -808,8 +808,8 @@ describe('Team', () => {
           imgUrls: [
             { url: 'http://cloudinary.com/img1.jpg', public_id: 'img1' },
             { url: 'http://cloudinary.com/img2.jpg', public_id: 'img2' },
-          ]
-        })
+          ],
+        }),
       };
 
       Team.findByPk.mockResolvedValue(mockTeam);
@@ -821,11 +821,11 @@ describe('Team', () => {
       const mockReq = {
         params: { id: '1' },
         files: mockFiles,
-        user: { id: 1, role: 'admin' }
+        user: { id: 1, role: 'admin' },
       };
       const mockRes = {
         status: jest.fn().mockReturnThis(),
-        json: jest.fn()
+        json: jest.fn(),
       };
       const mockNext = jest.fn();
 
@@ -842,8 +842,8 @@ describe('Team', () => {
           newImages: [
             { url: 'http://cloudinary.com/img1.jpg', public_id: 'img1' },
             { url: 'http://cloudinary.com/img2.jpg', public_id: 'img2' },
-          ]
-        }
+          ],
+        },
       });
       expect(mockTeam.update).toHaveBeenCalledWith({
         imgUrls: [
@@ -854,7 +854,6 @@ describe('Team', () => {
     });
 
     it('should return 404 when team not found for upload', async () => {
-
       Team.findByPk.mockResolvedValue(null);
 
       const response = await request(app)
@@ -865,7 +864,6 @@ describe('Team', () => {
     });
 
     it('should return 400 when no images provided', async () => {
-
       Team.findByPk.mockResolvedValue({ id: 1, imgUrls: [] });
 
       // Send request with no files attached
@@ -877,8 +875,6 @@ describe('Team', () => {
     });
 
     it('should return 400 when exceeding maximum images limit', async () => {
-
-
       const mockTeam = {
         id: 1,
         imgUrls: [
@@ -922,8 +918,6 @@ describe('Team', () => {
 
   describe('DELETE /api/v1/teams/img-url/:id/:imageIndex', () => {
     it('should delete image successfully', async () => {
-
-
       const mockTeam = {
         id: 1,
         name: 'Manchester United',
@@ -947,9 +941,6 @@ describe('Team', () => {
     });
 
     it('should return 404 when team not found for delete image', async () => {
-      
-
-
       Team.findByPk.mockResolvedValue(null);
 
       const response = await request(app)
@@ -960,9 +951,6 @@ describe('Team', () => {
     });
 
     it('should return 400 when team has no images to delete', async () => {
-      
-
-
       Team.findByPk.mockResolvedValue({ id: 1, imgUrls: [] });
 
       const response = await request(app)
@@ -974,10 +962,6 @@ describe('Team', () => {
     });
 
     it('should return 400 for invalid image index', async () => {
-      
-
-
-
       const mockTeam = {
         id: 1,
         imgUrls: [{ url: 'img1.jpg', public_id: 'id1' }],
@@ -994,10 +978,6 @@ describe('Team', () => {
     });
 
     it('should handle cloudinary deletion error gracefully', async () => {
-      
-
-
-
       const mockTeam = {
         id: 1,
         name: 'Manchester United',
@@ -1019,10 +999,6 @@ describe('Team', () => {
 
   describe('PATCH /api/v1/teams/generate-descriptions/:id', () => {
     it('should update team description successfully', async () => {
-      
-
-
-
       const mockTeam = {
         id: 1,
         name: 'Manchester United',
@@ -1045,10 +1021,6 @@ describe('Team', () => {
     });
 
     it('should return 400 for invalid team ID in description update', async () => {
-      
-
-
-
       const response = await request(app)
         .patch('/api/v1/teams/generate-descriptions/invalid')
         .set('Authorization', `Bearer ${adminToken}`);
@@ -1058,9 +1030,6 @@ describe('Team', () => {
     });
 
     it('should return 404 when team not found for description update', async () => {
-      
-
-
       Team.findByPk.mockResolvedValue(null);
 
       const response = await request(app)
@@ -1072,10 +1041,6 @@ describe('Team', () => {
     });
 
     it('should skip generation when description already exists', async () => {
-      
-
-
-
       const mockTeam = {
         id: 1,
         description: 'Existing description',
@@ -1092,10 +1057,6 @@ describe('Team', () => {
     });
 
     it('should handle AI service error in description update', async () => {
-      
-
-
-
       const mockTeam = {
         id: 1,
         name: 'Manchester United',

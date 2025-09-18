@@ -90,7 +90,7 @@ describe('Authenticate Middleware', () => {
       // Reset mocks for this test
       verifyToken.mockReset();
       User.findByPk.mockReset();
-      
+
       app.get('/protected', authenticate, (req, res) => {
         res.json({ success: true });
       });
@@ -110,7 +110,7 @@ describe('Authenticate Middleware', () => {
       // Reset mocks for this test
       verifyToken.mockReset();
       User.findByPk.mockReset();
-      
+
       app.get('/protected', authenticate, (req, res) => {
         res.json({ success: true });
       });
@@ -193,7 +193,7 @@ describe('Authenticate Middleware', () => {
     it('should handle authorization header with extra spaces', async () => {
       verifyToken.mockReset();
       User.findByPk.mockReset();
-      
+
       app.get('/protected', authenticate, (req, res) => {
         res.json({ success: true });
       });
@@ -212,7 +212,7 @@ describe('Authenticate Middleware', () => {
     it('should handle lowercase bearer', async () => {
       verifyToken.mockReset();
       User.findByPk.mockReset();
-      
+
       app.get('/protected', authenticate, (req, res) => {
         res.json({ success: true });
       });
@@ -231,7 +231,7 @@ describe('Authenticate Middleware', () => {
     it('should handle Basic authentication format', async () => {
       verifyToken.mockReset();
       User.findByPk.mockReset();
-      
+
       app.get('/protected', authenticate, (req, res) => {
         res.json({ success: true });
       });
