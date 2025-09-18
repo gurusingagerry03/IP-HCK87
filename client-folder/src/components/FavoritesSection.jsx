@@ -1,9 +1,10 @@
+import React from 'react';
 import { motion, useInView } from 'framer-motion';
 import { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { isLoggedIn as checkIsLoggedIn, getAuthHeaders } from '../helpers/auth.jsx';
 
-export function FavoriteSection() {
+export const FavoriteSection = React.memo(() => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [favorites, setFavorites] = useState([]);
   const ref = useRef(null);
@@ -19,35 +20,28 @@ export function FavoriteSection() {
   }, []);
 
   const containerVariants = {
-    hidden: { opacity: 0, y: 50 },
+    hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      y: 0,
       transition: {
-        duration: 0.8,
-        ease: [0.22, 1, 0.36, 1],
-        staggerChildren: 0.1,
+        duration: 0.3,
       },
     },
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 30, filter: 'blur(8px)' },
+    hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      y: 0,
-      filter: 'blur(0px)',
-      transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
+      transition: { duration: 0.3 },
     },
   };
 
   const cardVariants = {
-    hidden: { opacity: 0, y: 20, scale: 0.9 },
+    hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
+      transition: { duration: 0.3 },
     },
   };
 
@@ -348,4 +342,4 @@ export function FavoriteSection() {
       </div>
     </motion.section>
   );
-}
+});

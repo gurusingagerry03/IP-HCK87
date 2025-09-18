@@ -40,7 +40,11 @@ export default function TeamList() {
       params.q = searchTerm.trim();
     }
 
-    fetchClubs(params);
+    // Use setTimeout to debounce the API call
+    clearTimeout(window.fetchTeamsTimeout);
+    window.fetchTeamsTimeout = setTimeout(() => {
+      fetchClubs(params);
+    }, 100);
   };
 
   useEffect(() => {

@@ -6,20 +6,17 @@ export function HomeSection() {
     'https://images.unsplash.com/photo-1556056504-5c7696c4c28d?q=80&w=1920&auto=format&fit=crop';
 
   const fastContainer = {
-    hidden: { opacity: 0, y: 16 },
+    hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      y: 0,
-      transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1], staggerChildren: 0.08 },
+      transition: { duration: 0.3 },
     },
   };
   const fastItem = {
-    hidden: { opacity: 0, y: 18, filter: 'blur(6px)' },
+    hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      y: 0,
-      filter: 'blur(0px)',
-      transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] },
+      transition: { duration: 0.3 },
     },
   };
 

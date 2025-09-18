@@ -4,12 +4,13 @@ import { useNavigate } from 'react-router';
 import toast from 'react-hot-toast';
 import http from '../helpers/http';
 import { getAuthHeaders, clearAuthAndRedirect } from '../helpers/auth.jsx';
-import { useMatches, usePlayers } from '../store/hooks';
+// import { useMatches, usePlayers } from '../store/hooks'; // TEMPORARILY DISABLED FOR DEBUGGING
 
 export default function Admin() {
   const navigate = useNavigate();
-  const { matches: matchesData } = useMatches();
-  const { players: playersData } = usePlayers();
+  // TEMPORARILY DISABLED REDUX FOR DEBUGGING
+  // const { matches: matchesData = [], loading: matchesLoading } = useMatches({}, false);
+  // const { players: playersData = [], loading: playersLoading } = usePlayers({}, false);
 
   const [createStatus, setCreateStatus] = useState('idle'); // idle, creating, success, error
   const [leagueName, setLeagueName] = useState('');
@@ -44,18 +45,26 @@ export default function Admin() {
         const teamsResponse = await http.get('/teams');
         const teamsData = teamsResponse.data.data || teamsResponse.data || [];
 
-        // Use Redux data for players and matches
-        let totalPlayers = playersData.length || 0;
+        // Use direct HTTP calls (NO REDUX) for debugging
+        let totalPlayers = 0;
+        let totalMatches = 0;
+        let completedMatches = 0;
+        let upcomingMatches = 0;
 
-        const totalMatches = matchesData.length;
+        // Direct HTTP calls
+        const playersResponse = await http.get('/players');
+        totalPlayers = playersResponse.data.data?.length || playersResponse.data?.length || 0;
 
-        // Count completed and upcoming matches based on status from database
-        const completedMatches = matchesData.filter(
+        const matchesResponse = await http.get('/matches');
+        const matchesDataFromHttp = matchesResponse.data.data || matchesResponse.data || [];
+        totalMatches = matchesDataFromHttp.length;
+
+        completedMatches = matchesDataFromHttp.filter(
           (match) =>
             match.status === 'finished' || match.status === 'completed' || match.status === 'FT'
         ).length;
 
-        const upcomingMatches = matchesData.filter(
+        upcomingMatches = matchesDataFromHttp.filter(
           (match) =>
             match.status === 'scheduled' || match.status === 'upcoming' || match.status === 'NS'
         ).length;

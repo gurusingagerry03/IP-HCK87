@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import http from '../helpers/http';
 import { getToken, isLoggedIn } from '../helpers/auth.jsx';
-import { useFavoritesState, useFavoritesDispatch } from '../store/hooks';
+import { useFavorites } from '../store/hooks';
 
 export default function ClubDetail() {
   const { id } = useParams();
@@ -14,8 +14,7 @@ export default function ClubDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('info');
-  const { favorites } = useFavoritesState();
-  const { fetchFavorites } = useFavoritesDispatch();
+  const { favorites, refetch: refetchFavorites } = useFavorites();
   const [isFavorited, setIsFavorited] = useState(false);
   const [isAddingFavorite, setIsAddingFavorite] = useState(false);
   const [isTabsSticky, setIsTabsSticky] = useState(false);
@@ -79,14 +78,7 @@ export default function ClubDetail() {
     }
   }, [id]);
 
-  // Fetch user's favorites from database and check if current club is favorited
-  useEffect(() => {
-    if (!isLoggedIn()) {
-      setIsFavorited(false);
-      return;
-    }
-    fetchFavorites();
-  }, [fetchFavorites]);
+  // Favorites are automatically fetched by useFavorites() hook when user is logged in
 
   // Check if current club is in favorites whenever favorites change
   useEffect(() => {
@@ -201,7 +193,7 @@ export default function ClubDetail() {
             },
           });
           // Refetch favorites to get updated data
-          fetchFavorites();
+          refetchFavorites();
           toast.success('Team removed from favorites!');
         }
       } else {
@@ -215,7 +207,7 @@ export default function ClubDetail() {
         });
 
         // Refetch favorites to get updated data
-        fetchFavorites();
+        refetchFavorites();
         toast.success('Team added to favorites!');
       }
     } catch (error) {

@@ -4,20 +4,13 @@ import { Link } from 'react-router';
 import toast from 'react-hot-toast';
 import http from '../helpers/http';
 import { getToken, isLoggedIn, getAuthHeaders } from '../helpers/auth.jsx';
-import { useFavoritesState, useFavoritesDispatch } from '../store/hooks';
+import { useFavorites } from '../store/hooks';
 
 export default function Favorites() {
-  const { favorites, loading, error } = useFavoritesState();
-  const { fetchFavorites } = useFavoritesDispatch();
+  const { favorites, loading, error, refetch: refetchFavorites } = useFavorites();
   const [filterBy, setFilterBy] = useState('all');
 
-  // Load favorites from database on component mount
-  useEffect(() => {
-    if (!isLoggedIn()) {
-      return;
-    }
-    fetchFavorites();
-  }, [fetchFavorites]);
+  // Favorites are automatically fetched by useFavorites() hook when user is logged in
 
   const removeFavorite = async (favoriteId) => {
     if (!isLoggedIn()) {
@@ -33,7 +26,7 @@ export default function Favorites() {
       });
 
       // Refetch favorites to get updated data
-      fetchFavorites();
+      refetchFavorites();
       toast.success('Team removed from favorites!');
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Failed to remove favorite. Please try again.';
@@ -59,7 +52,7 @@ export default function Favorites() {
 
       await Promise.all(deletePromises);
       // Refetch favorites to get updated data
-      fetchFavorites();
+      refetchFavorites();
       toast.success('All favorites cleared!');
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Failed to clear favorites. Please try again.';
