@@ -93,16 +93,46 @@ export default function Login() {
   }
 
   useEffect(() => {
-    google.accounts.id.initialize({
-      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-      callback: handleCredentialResponse,
-    });
-    google.accounts.id.renderButton(document.getElementById('buttonDiv'), {
-      theme: 'outline',
-      size: 'large',
-    });
-    google.accounts.id.prompt();
+    const initializeGoogle = () => {
+      if (window.google && window.google.accounts) {
+        google.accounts.id.initialize({
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+          callback: handleCredentialResponse,
+        });
+        google.accounts.id.renderButton(document.getElementById('buttonDiv'), {
+          theme: 'outline',
+          size: 'large',
+          width: '300',
+          text: 'signin_with',
+          shape: 'rectangular',
+        });
+
+        // Center the Google button
+        setTimeout(() => {
+          const googleButton = document.querySelector('#buttonDiv > div');
+          if (googleButton) {
+            googleButton.style.margin = '0 auto';
+            googleButton.style.display = 'block';
+          }
+        }, 100);
+      } else {
+        setTimeout(initializeGoogle, 100);
+      }
+    };
+
+    initializeGoogle();
   }, []);
+  // useEffect(() => {
+  //   google.accounts.id.initialize({
+  //     client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+  //     callback: handleCredentialResponse,
+  //   });
+  //   google.accounts.id.renderButton(document.getElementById('buttonDiv'), {
+  //     theme: 'outline',
+  //     size: 'large',
+  //   });
+  //   google.accounts.id.prompt();
+  // }, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center py-16 px-4">
@@ -128,7 +158,7 @@ export default function Login() {
               transition={{ delay: 0.3, duration: 0.6 }}
               className="text-3xl md:text-4xl font-bold text-white mb-2"
             >
-              Welcome Back
+              Welcome Back guysss
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 20 }}

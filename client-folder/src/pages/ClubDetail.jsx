@@ -46,7 +46,7 @@ export default function ClubDetail() {
 
   // Default avatar for players when thumbUrl is not available or errors
   const defaultAvatar =
-    'https://thumbs.dreamstime.com/b/default-avatar-profile-icon-gray-placeholder-vector-illustration-378729418.jpg';
+    'https://media.istockphoto.com/id/1223477625/id/vektor/ikon-profil-avatar-default-pria-pria-menghadapi-tempat-penampung-siluet-ilustrasi-vektor.jpg?s=612x612&w=0&k=20&c=Yw2v0KgY0cxaelnjuizqwFP_lOLS-HiIyw_2EdAZ2qQ=';
 
   // Fetch club data and players
   useEffect(() => {
