@@ -1,25 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router';
+import { useAuth } from '../helpers/auth.jsx';
 
 export default function Profile() {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
+  const { user, isLoggedIn, logout } = useAuth();
 
-  // Load user data from localStorage
   useEffect(() => {
-    const userData = localStorage.getItem('user_data');
-    if (userData) {
-      try {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
-      } catch (error) {
-        navigate('/login');
-      }
-    } else {
+    if (!isLoggedIn) {
       navigate('/login');
     }
-  }, [navigate]);
+  }, [isLoggedIn, navigate]);
 
   const fade = {
     hidden: { opacity: 0, y: 20 },
@@ -102,8 +94,7 @@ export default function Profile() {
               <button
                 type="button"
                 onClick={() => {
-                  localStorage.removeItem('access_token');
-                  localStorage.removeItem('user_data');
+                  logout();
                   navigate('/login');
                 }}
                 className="flex items-center justify-center gap-2 px-6 py-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl hover:bg-red-500/20 hover:border-red-500/50 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"

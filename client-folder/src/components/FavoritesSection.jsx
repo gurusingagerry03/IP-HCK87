@@ -1,22 +1,13 @@
 import { motion, useInView } from 'framer-motion';
 import { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router';
+import { useAuth } from '../helpers/auth.jsx';
 
 export function FavoriteSection() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { isLoggedIn } = useAuth();
   const [favorites, setFavorites] = useState([]);
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, amount: 0.3 });
-
-  // Check authentication
-  useEffect(() => {
-    const checkAuth = () => {
-      const token = localStorage.getItem('access_token');
-      setIsLoggedIn(!!token);
-    };
-
-    checkAuth();
-  }, []);
 
   const containerVariants = {
     hidden: { opacity: 0, y: 50 },

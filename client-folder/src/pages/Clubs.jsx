@@ -6,8 +6,10 @@ import http from '../helpers/http';
 import { useSearchParams } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchClub } from '../store/clubSlice';
+import { useAuth } from '../helpers/auth.jsx';
 
 export default function Clubs() {
+  const { isLoggedIn, getToken } = useAuth();
   const [allTeams, setAllTeams] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [addingFavorites, setAddingFavorites] = useState(new Set());
@@ -65,11 +67,12 @@ export default function Clubs() {
   // Fetch user's favorites from database
   useEffect(() => {
     const fetchFavorites = async () => {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
+      if (!isLoggedIn) {
         setFavorites([]);
         return;
       }
+      
+      const token = getToken();
 
       try {
         const response = await http.get('/favorites', {
@@ -88,14 +91,15 @@ export default function Clubs() {
     };
 
     fetchFavorites();
-  }, []);
+  }, [isLoggedIn, getToken]);
 
   const handleFavoriteToggle = async (team) => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
+    if (!isLoggedIn) {
       toast.error('Please login to add favorites');
       return;
     }
+    
+    const token = getToken();
 
     const isCurrentlyFavorite = favorites.some((fav) => fav.Team?.id === team.id);
 

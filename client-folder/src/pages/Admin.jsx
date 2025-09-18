@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router';
 import toast from 'react-hot-toast';
+import { useAuth } from '../helpers/auth.jsx';
 import http from '../helpers/http';
 
 export default function Admin() {
   const navigate = useNavigate();
+  const { getToken, logout, isAdmin } = useAuth();
   const [createStatus, setCreateStatus] = useState('idle'); // idle, creating, success, error
   const [leagueName, setLeagueName] = useState('');
   const [country, setCountry] = useState('');
@@ -26,6 +28,13 @@ export default function Admin() {
   });
 
   useEffect(() => {
+    // Check if user is admin
+    if (!isAdmin()) {
+      toast.error('Admin access required');
+      navigate('/login');
+      return;
+    }
+    
     const fetchInitialData = async () => {
       try {
         setLoadingLeagues(true);
@@ -96,7 +105,7 @@ export default function Admin() {
         method: 'POST',
         url: '/leagues/sync',
         data: { leagueName: leagueName.trim(), leagueCountry: country.trim() },
-        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+        headers: { Authorization: `Bearer ${getToken()}` },
       });
 
       setCreateStatus('success');
@@ -129,7 +138,7 @@ export default function Admin() {
       await http({
         method: 'POST',
         url: `/teams/sync/${selectedLeagueForTeams}`,
-        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+        headers: { Authorization: `Bearer ${getToken()}` },
       });
 
       setTeamPlayerSyncStatus('success');
@@ -159,7 +168,7 @@ export default function Admin() {
       await http({
         method: 'POST',
         url: `/matches/sync/${selectedLeagueForMatches}`,
-        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+        headers: { Authorization: `Bearer ${getToken()}` },
       });
 
       setMatchSyncStatus('success');
@@ -206,8 +215,7 @@ export default function Admin() {
             {/* Right logout */}
             <button
               onClick={() => {
-                localStorage.removeItem('access_token');
-                localStorage.removeItem('user_data');
+                logout();
                 navigate('/login');
               }}
               className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 rounded-xl transition-all duration-300"

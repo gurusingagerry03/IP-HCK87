@@ -2,11 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { useAuth } from '../helpers/auth.jsx';
 import http from '../helpers/http';
 
 export default function ClubDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isLoggedIn, getToken } = useAuth();
   const [club, setClub] = useState(null);
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,9 +30,10 @@ export default function ClubDetail() {
   const heroImages = (() => {
     if (club?.imgUrls) {
       try {
-        const parsedImgUrls = typeof club.imgUrls === 'string' ? JSON.parse(club.imgUrls) : club.imgUrls;
+        const parsedImgUrls =
+          typeof club.imgUrls === 'string' ? JSON.parse(club.imgUrls) : club.imgUrls;
         if (Array.isArray(parsedImgUrls) && parsedImgUrls.length > 0) {
-          return parsedImgUrls.map(img => img.url);
+          return parsedImgUrls.map((img) => img.url);
         }
       } catch (error) {
         // Silently handle parsing error
@@ -79,12 +82,13 @@ export default function ClubDetail() {
   // Fetch user's favorites from database
   useEffect(() => {
     const fetchFavorites = async () => {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
+      if (!isLoggedIn) {
         setFavorites([]);
         setIsFavorited(false);
         return;
       }
+      
+      const token = getToken();
 
       try {
         const response = await http.get('/favorites', {
@@ -194,11 +198,12 @@ export default function ClubDetail() {
 
   // Handle add to favorites
   const handleAddToFavorites = async () => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
+    if (!isLoggedIn) {
       toast.error('Please login to add favorites');
       return;
     }
+    
+    const token = getToken();
 
     try {
       setIsAddingFavorite(true);

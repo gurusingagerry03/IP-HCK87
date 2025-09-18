@@ -2,22 +2,25 @@ import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router';
 import toast from 'react-hot-toast';
+import { useAuth } from '../helpers/auth.jsx';
 import http from '../helpers/http';
 
 export default function Favorites() {
   const [favorites, setFavorites] = useState([]);
   const [filterBy, setFilterBy] = useState('all');
   const [loading, setLoading] = useState(true);
+  const { isLoggedIn, getToken } = useAuth();
 
   // Load favorites from database on component mount
   useEffect(() => {
     const fetchFavorites = async () => {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
+      if (!isLoggedIn) {
         setFavorites([]);
         setLoading(false);
         return;
       }
+      
+      const token = getToken();
 
       try {
         const response = await http.get('/favorites', {
@@ -44,11 +47,12 @@ export default function Favorites() {
   }, []);
 
   const removeFavorite = async (favoriteId) => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
+    if (!isLoggedIn) {
       toast.error('Please login to remove favorites');
       return;
     }
+    
+    const token = getToken();
 
     try {
       await http({
@@ -67,11 +71,12 @@ export default function Favorites() {
   };
 
   const clearAllFavorites = async () => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
+    if (!isLoggedIn) {
       toast.error('Please login to clear favorites');
       return;
     }
+    
+    const token = getToken();
 
     try {
       // Delete all favorites for the user
@@ -122,7 +127,6 @@ export default function Favorites() {
   }
 
   // Check if user is logged in
-  const isLoggedIn = localStorage.getItem('access_token');
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen py-16">
