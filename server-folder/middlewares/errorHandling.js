@@ -25,19 +25,19 @@ const errorHandling = (err, req, res, next) => {
       res.status(401).json({ message: 'invalid token' });
       break;
     case 'ForbiddenAccess':
-      res.status(403).json({ message: 'Forbidden Access' });
+      res.status(403).json({ success: false, message: 'Forbidden Access' });
       break;
     case 'NotFound':
-      res.status(404).json({ message: err.message });
+      res.status(404).json({ success: false, message: err.message || 'Not found' });
       break;
     case 'BadRequest':
-      res.status(400).json({ message: err.message });
+      res.status(400).json({ message: err.message || 'Bad request' });
       break;
     case 'Unauthorized':
       res.status(401).json({ message: err.message || 'Authentication required' });
       break;
     case 'Forbidden':
-      res.status(403).json({ message: err.message || 'Access denied' });
+      res.status(403).json({ success: false, message: err.message || 'Access denied' });
       break;
     case 'Conflict':
       res.status(409).json({ message: err.message || 'Resource conflict' });

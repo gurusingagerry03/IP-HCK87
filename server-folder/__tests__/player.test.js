@@ -285,6 +285,7 @@ describe('Player Controller', () => {
 
         expect(response.body).toEqual({
           message: 'Team not found',
+          success: false,
         });
         expect(Team.findByPk).toHaveBeenCalledWith(teamId, {
           include: [
@@ -304,6 +305,7 @@ describe('Player Controller', () => {
 
         expect(response.body).toEqual({
           message: 'Team not found',
+          success: false,
         });
       });
     });

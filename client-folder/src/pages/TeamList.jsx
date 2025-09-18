@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchClub } from '../store/clubSlice';
+import { useClubsState, useClubsDispatch } from '../store/hooks';
+import toast from 'react-hot-toast';
 import http from '../helpers/http.jsx';
+import { getAuthHeaders } from '../helpers/auth.jsx';
 
 export default function TeamList() {
-  const dispatch = useDispatch();
-  const { teams, meta, loading, error } = useSelector((state) => state.clubs);
+  const { teams, meta, loading, error } = useClubsState();
+  const { fetchClubs } = useClubsDispatch();
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const totalPages = meta.totalPages || 0;
@@ -39,7 +40,7 @@ export default function TeamList() {
       params.q = searchTerm.trim();
     }
 
-    dispatch(fetchClub(params));
+    fetchClubs(params);
   };
 
   useEffect(() => {
@@ -137,16 +138,14 @@ export default function TeamList() {
     try {
       // Get team details with images
       const response = await http.get(`/teams/${team.id}`);
-      console.log('Gallery API response:', response.data);
-      console.log('imgUrls from API:', response.data.imgUrls);
 
       const images = response.data.imgUrls || [];
-      console.log('Setting gallery images:', images);
       setGalleryImages(images);
     } catch (error) {
-      console.error('Error loading gallery:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to load images. Please try again.';
+      toast.error(errorMessage);
       setGalleryImages([]);
-      setUploadError('Failed to load images. Please try again.');
+      setUploadError(errorMessage);
     } finally {
       setLoadingGallery(false);
     }
@@ -172,7 +171,7 @@ export default function TeamList() {
         url: `/teams/img-url/${selectedTeam.id}/${imageIndex}`,
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+          ...getAuthHeaders(),
         },
       });
 
@@ -181,8 +180,9 @@ export default function TeamList() {
       // Refresh team data in background
       fetchTeams(currentPage, search);
     } catch (error) {
-      console.error('Error deleting image:', error);
-      setUploadError('Failed to delete image. Please try again.');
+      const errorMessage = error.response?.data?.message || 'Failed to delete image. Please try again.';
+      toast.error(errorMessage);
+      setUploadError(errorMessage);
     } finally {
       setDeletingImageIndex(null);
     }
@@ -213,7 +213,7 @@ export default function TeamList() {
         url: `/teams/img-url/${selectedTeam.id}`,
         data: formData,
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+          ...getAuthHeaders(),
         },
       });
 
@@ -221,8 +221,7 @@ export default function TeamList() {
       closeUploadModal();
       fetchTeams(currentPage, search); // Refresh team data
 
-      // TODO: Show success toast notification
-      console.log('Upload successful:', response.data);
+      toast.success('Image uploaded successfully');
     } catch (error) {
       // Handle error from server
       let errorMessage = 'Upload failed. Please try again.';
@@ -240,7 +239,7 @@ export default function TeamList() {
       }
 
       setUploadError(errorMessage);
-      console.error('Upload error:', error);
+      toast.error(errorMessage);
     } finally {
       setUploading(false);
     }
@@ -753,11 +752,11 @@ export default function TeamList() {
                         alt={`${selectedTeam?.name} image ${index + 1}`}
                         className="w-full h-32 object-cover rounded-lg border"
                         onError={(e) => {
-                          console.error('Image failed to load:', image);
+                          toast.error('Image failed to load');
                           e.target.src =
                             'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA2MEw0NS41IDQ5LjVMNjUgNjlNNjUgNDVINjVNNjUgNDVINjVNMzUgNDBINjVWNDBIMzVWNDBaIiBzdHJva2U9IiM5Q0E0QUYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjx0ZXh0IHg9IjUwIiB5PSI4MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiBmaWxsPSIjOUNBNEFGIj5JbWFnZSBOb3QgRm91bmQ8L3RleHQ+Cjwvc3ZnPgo=';
                         }}
-                        onLoad={() => console.log('Image loaded successfully:', image.url || image)}
+                        onLoad={() => {}}
                       />
                       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         <button

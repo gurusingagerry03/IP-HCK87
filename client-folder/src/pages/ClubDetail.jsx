@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import http from '../helpers/http';
+import { getToken, isLoggedIn } from '../helpers/auth.jsx';
+import { useFavoritesState, useFavoritesDispatch } from '../store/hooks';
 
 export default function ClubDetail() {
   const { id } = useParams();
@@ -12,7 +14,8 @@ export default function ClubDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('info');
-  const [favorites, setFavorites] = useState([]);
+  const { favorites } = useFavoritesState();
+  const { fetchFavorites } = useFavoritesDispatch();
   const [isFavorited, setIsFavorited] = useState(false);
   const [isAddingFavorite, setIsAddingFavorite] = useState(false);
   const [isTabsSticky, setIsTabsSticky] = useState(false);
@@ -33,7 +36,7 @@ export default function ClubDetail() {
           return parsedImgUrls.map(img => img.url);
         }
       } catch (error) {
-        console.error('Error parsing imgUrls:', error);
+        toast.error('Error parsing team images');
       }
     }
     return defaultImages;
@@ -76,39 +79,22 @@ export default function ClubDetail() {
     }
   }, [id]);
 
-  // Fetch user's favorites from database
+  // Fetch user's favorites from database and check if current club is favorited
   useEffect(() => {
-    const fetchFavorites = async () => {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        setFavorites([]);
-        setIsFavorited(false);
-        return;
-      }
-
-      try {
-        const response = await http.get('/favorites', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (response.data.success) {
-          const userFavorites = response.data.data || [];
-          setFavorites(userFavorites);
-          // Check if current club is in favorites
-          const currentClubIsFavorited = userFavorites.some((fav) => fav.Team?.id === parseInt(id));
-          setIsFavorited(currentClubIsFavorited);
-        }
-      } catch (error) {
-        // Silent error - user might not be logged in
-        setFavorites([]);
-        setIsFavorited(false);
-      }
-    };
-
+    if (!isLoggedIn()) {
+      setIsFavorited(false);
+      return;
+    }
     fetchFavorites();
-  }, [id]);
+  }, [fetchFavorites]);
+
+  // Check if current club is in favorites whenever favorites change
+  useEffect(() => {
+    if (favorites && id) {
+      const currentClubIsFavorited = favorites.some((fav) => fav.Team?.id === parseInt(id));
+      setIsFavorited(currentClubIsFavorited);
+    }
+  }, [favorites, id]);
 
   // Carousel autoplay
   useEffect(() => {
@@ -194,11 +180,11 @@ export default function ClubDetail() {
 
   // Handle add to favorites
   const handleAddToFavorites = async () => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
+    if (!isLoggedIn()) {
       toast.error('Please login to add favorites');
       return;
     }
+    const token = getToken();
 
     try {
       setIsAddingFavorite(true);
@@ -214,8 +200,8 @@ export default function ClubDetail() {
               Authorization: `Bearer ${token}`,
             },
           });
-          setFavorites((prev) => prev.filter((fav) => fav.Team?.id !== parseInt(id)));
-          setIsFavorited(false);
+          // Refetch favorites to get updated data
+          fetchFavorites();
           toast.success('Team removed from favorites!');
         }
       } else {
@@ -228,19 +214,8 @@ export default function ClubDetail() {
           },
         });
 
-        // Refetch favorites to get the complete data structure
-        const response = await http.get('/favorites', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (response.data.success) {
-          const userFavorites = response.data.data || [];
-          setFavorites(userFavorites);
-          setIsFavorited(true);
-        }
-
+        // Refetch favorites to get updated data
+        fetchFavorites();
         toast.success('Team added to favorites!');
       }
     } catch (error) {

@@ -127,7 +127,11 @@ describe('Authenticate Middleware', () => {
     });
 
     it('should return 401 when token verification fails', async () => {
-      verifyToken.mockRejectedValue(new Error('Invalid token'));
+      verifyToken.mockImplementation(() => {
+        const error = new Error('Invalid token');
+        error.name = 'JsonWebTokenError';
+        throw error;
+      });
       User.findByPk.mockReset();
 
       app.get('/protected', authenticate, (req, res) => {
@@ -149,7 +153,9 @@ describe('Authenticate Middleware', () => {
     it('should handle token verification with JsonWebTokenError', async () => {
       const error = new Error('jwt malformed');
       error.name = 'JsonWebTokenError';
-      verifyToken.mockRejectedValue(error);
+      verifyToken.mockImplementation(() => {
+        throw error;
+      });
       User.findByPk.mockReset();
 
       app.get('/protected', authenticate, (req, res) => {
@@ -170,7 +176,9 @@ describe('Authenticate Middleware', () => {
     it('should handle token verification with TokenExpiredError', async () => {
       const error = new Error('jwt expired');
       error.name = 'TokenExpiredError';
-      verifyToken.mockRejectedValue(error);
+      verifyToken.mockImplementation(() => {
+        throw error;
+      });
       User.findByPk.mockReset();
 
       app.get('/protected', authenticate, (req, res) => {
@@ -319,7 +327,11 @@ describe('Authenticate Middleware', () => {
 
   describe('Error Propagation', () => {
     it('should handle database errors during token verification', async () => {
-      verifyToken.mockRejectedValue(new Error('Database connection failed'));
+      verifyToken.mockImplementation(() => {
+        const error = new Error('Database connection failed');
+        error.name = 'JsonWebTokenError'; // Make it a JWT error so it returns 401
+        throw error;
+      });
       User.findByPk.mockReset();
 
       app.get('/protected', authenticate, (req, res) => {

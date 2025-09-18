@@ -10,7 +10,15 @@ jest.mock('../../helpers/jwt', () => ({
   verifyToken: jest.fn(),
 }));
 
+// Mock the User model
+jest.mock('../../models', () => ({
+  User: {
+    findByPk: jest.fn(),
+  },
+}));
+
 const { verifyToken } = require('../../helpers/jwt');
+const { User } = require('../../models');
 
 // Test environment
 process.env.NODE_ENV = 'test';
@@ -30,6 +38,8 @@ describe('AdminOnly Middleware', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    verifyToken.mockReset();
+    User.findByPk.mockReset();
   });
 
   describe('Admin Access Control', () => {
@@ -40,7 +50,8 @@ describe('AdminOnly Middleware', () => {
         role: 'admin',
       };
 
-      verifyToken.mockResolvedValue(mockAdminUser);
+      verifyToken.mockReturnValue(mockAdminUser);
+      User.findByPk.mockResolvedValue(mockAdminUser);
 
       app.get('/admin-only', authenticate, adminOnly, (req, res) => {
         res.json({
@@ -72,7 +83,8 @@ describe('AdminOnly Middleware', () => {
         role: 'user',
       };
 
-      verifyToken.mockResolvedValue(mockRegularUser);
+      verifyToken.mockReturnValue(mockRegularUser);
+      User.findByPk.mockResolvedValue(mockRegularUser);
 
       app.get('/admin-only', authenticate, adminOnly, (req, res) => {
         res.json({
@@ -102,7 +114,8 @@ describe('AdminOnly Middleware', () => {
         // role is undefined
       };
 
-      verifyToken.mockResolvedValue(mockUserWithoutRole);
+      verifyToken.mockReturnValue(mockUserWithoutRole);
+      User.findByPk.mockResolvedValue(mockUserWithoutRole);
 
       app.get('/admin-only', authenticate, adminOnly, (req, res) => {
         res.json({
@@ -132,7 +145,8 @@ describe('AdminOnly Middleware', () => {
         role: null,
       };
 
-      verifyToken.mockResolvedValue(mockUserWithNullRole);
+      verifyToken.mockReturnValue(mockUserWithNullRole);
+      User.findByPk.mockResolvedValue(mockUserWithNullRole);
 
       app.get('/admin-only', authenticate, adminOnly, (req, res) => {
         res.json({
@@ -162,7 +176,8 @@ describe('AdminOnly Middleware', () => {
         role: '',
       };
 
-      verifyToken.mockResolvedValue(mockUserWithEmptyRole);
+      verifyToken.mockReturnValue(mockUserWithEmptyRole);
+      User.findByPk.mockResolvedValue(mockUserWithEmptyRole);
 
       app.get('/admin-only', authenticate, adminOnly, (req, res) => {
         res.json({
@@ -194,7 +209,8 @@ describe('AdminOnly Middleware', () => {
         role: 'ADMIN',
       };
 
-      verifyToken.mockResolvedValue(mockUserWithUppercaseRole);
+      verifyToken.mockReturnValue(mockUserWithUppercaseRole);
+      User.findByPk.mockResolvedValue(mockUserWithUppercaseRole);
 
       app.get('/admin-only', authenticate, adminOnly, (req, res) => {
         res.json({
@@ -224,7 +240,8 @@ describe('AdminOnly Middleware', () => {
         role: 'moderator',
       };
 
-      verifyToken.mockResolvedValue(mockModeratorUser);
+      verifyToken.mockReturnValue(mockModeratorUser);
+      User.findByPk.mockResolvedValue(mockModeratorUser);
 
       app.get('/admin-only', authenticate, adminOnly, (req, res) => {
         res.json({
@@ -254,7 +271,8 @@ describe('AdminOnly Middleware', () => {
         role: 'guest',
       };
 
-      verifyToken.mockResolvedValue(mockGuestUser);
+      verifyToken.mockReturnValue(mockGuestUser);
+      User.findByPk.mockResolvedValue(mockGuestUser);
 
       app.get('/admin-only', authenticate, adminOnly, (req, res) => {
         res.json({
@@ -289,7 +307,8 @@ describe('AdminOnly Middleware', () => {
         permissions: ['read', 'write', 'delete'],
       };
 
-      verifyToken.mockResolvedValue(mockAdminWithExtras);
+      verifyToken.mockReturnValue(mockAdminWithExtras);
+      User.findByPk.mockResolvedValue(mockAdminWithExtras);
 
       app.get('/admin-only', authenticate, adminOnly, (req, res) => {
         res.json({
@@ -339,7 +358,8 @@ describe('AdminOnly Middleware', () => {
         role: 'admin',
       };
 
-      verifyToken.mockResolvedValue(mockAdminUser);
+      verifyToken.mockReturnValue(mockAdminUser);
+      User.findByPk.mockResolvedValue(mockAdminUser);
 
       app.post('/admin-create', authenticate, adminOnly, (req, res) => {
         res.json({
@@ -372,7 +392,8 @@ describe('AdminOnly Middleware', () => {
         role: 'admin',
       };
 
-      verifyToken.mockResolvedValue(mockAdminUser);
+      verifyToken.mockReturnValue(mockAdminUser);
+      User.findByPk.mockResolvedValue(mockAdminUser);
 
       app.put('/admin-update/:id', authenticate, adminOnly, (req, res) => {
         res.json({
@@ -407,7 +428,8 @@ describe('AdminOnly Middleware', () => {
         role: 'admin',
       };
 
-      verifyToken.mockResolvedValue(mockAdminUser);
+      verifyToken.mockReturnValue(mockAdminUser);
+      User.findByPk.mockResolvedValue(mockAdminUser);
 
       app.delete('/admin-delete/:id', authenticate, adminOnly, (req, res) => {
         res.json({

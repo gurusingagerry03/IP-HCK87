@@ -31,8 +31,9 @@ export default function MatchPrediction() {
           setError('Match not found');
         }
       } catch (err) {
-        setError('Failed to load match data');
-        toast.error('Failed to load match data. Please try again.');
+        const errorMessage = err.response?.data?.message || 'Failed to load match data. Please try again.';
+        setError(errorMessage);
+        toast.error(errorMessage);
       } finally {
         setLoading(false);
       }

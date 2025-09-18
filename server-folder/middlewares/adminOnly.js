@@ -1,4 +1,4 @@
-const { UnauthorizedError } = require('../helpers/customErrors');
+const { UnauthorizedError, ForbiddenError } = require('../helpers/customErrors');
 
 /**
  * Middleware to check if user has admin role
@@ -7,10 +7,10 @@ const { UnauthorizedError } = require('../helpers/customErrors');
 const adminOnly = (req, res, next) => {
   try {
     if (!req.user) {
-      throw new UnauthorizedError('Authentication required');
+      throw new ForbiddenError('Access denied. Admin role required.');
     }
     if (req.user.role !== 'admin') {
-      throw new UnauthorizedError('Admin access required');
+      throw new ForbiddenError('Access denied. Admin role required.');
     }
 
     next();

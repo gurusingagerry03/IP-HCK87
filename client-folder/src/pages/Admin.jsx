@@ -3,9 +3,14 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router';
 import toast from 'react-hot-toast';
 import http from '../helpers/http';
+import { getAuthHeaders, clearAuthAndRedirect } from '../helpers/auth.jsx';
+import { useMatches, usePlayers } from '../store/hooks';
 
 export default function Admin() {
   const navigate = useNavigate();
+  const { matches: matchesData } = useMatches();
+  const { players: playersData } = usePlayers();
+
   const [createStatus, setCreateStatus] = useState('idle'); // idle, creating, success, error
   const [leagueName, setLeagueName] = useState('');
   const [country, setCountry] = useState('');
@@ -39,13 +44,8 @@ export default function Admin() {
         const teamsResponse = await http.get('/teams');
         const teamsData = teamsResponse.data.data || teamsResponse.data || [];
 
-        // Fetch players count (loop through teams to get total players)
-        const playersResponse = await http.get('/players');
-        let totalPlayers = playersResponse.data.data.length || playersResponse.data.length || 0;
-
-        // Fetch matches data (get all matches from new endpoint)
-        const matchesResponse = await http.get('/matches');
-        const matchesData = matchesResponse.data.data || matchesResponse.data || [];
+        // Use Redux data for players and matches
+        let totalPlayers = playersData.length || 0;
 
         const totalMatches = matchesData.length;
 
@@ -74,7 +74,6 @@ export default function Admin() {
           upcomingMatches,
         }));
       } catch (error) {
-        console.error('Failed to fetch initial data:', error);
         toast.error('Failed to load data');
       } finally {
         setLoadingLeagues(false);
@@ -96,7 +95,7 @@ export default function Admin() {
         method: 'POST',
         url: '/leagues/sync',
         data: { leagueName: leagueName.trim(), leagueCountry: country.trim() },
-        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+        headers: { ...getAuthHeaders() },
       });
 
       setCreateStatus('success');
@@ -110,7 +109,6 @@ export default function Admin() {
 
       setTimeout(() => setCreateStatus('idle'), 3000);
     } catch (error) {
-      console.error('League sync error:', error);
       const errorMessage = error.response?.data?.message || 'Failed to sync league';
       toast.error(errorMessage);
       setCreateStatus('idle');
@@ -130,7 +128,7 @@ export default function Admin() {
       await http({
         method: 'POST',
         url: `/teams/sync/${selectedLeagueForTeams}`,
-        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+        headers: { ...getAuthHeaders() },
       });
 
       setTeamPlayerSyncStatus('success');
@@ -141,7 +139,6 @@ export default function Admin() {
       );
       setTimeout(() => setTeamPlayerSyncStatus('idle'), 3000);
     } catch (error) {
-      console.error('Team/Player sync error:', error);
       const errorMessage = error.response?.data?.message || 'Failed to sync teams and players';
       toast.error(errorMessage);
       setTeamPlayerSyncStatus('idle');
@@ -161,7 +158,7 @@ export default function Admin() {
       await http({
         method: 'POST',
         url: `/matches/sync/${selectedLeagueForMatches}`,
-        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+        headers: { ...getAuthHeaders() },
       });
 
       setMatchSyncStatus('success');
@@ -170,7 +167,6 @@ export default function Admin() {
       );
       setTimeout(() => setMatchSyncStatus('idle'), 3000);
     } catch (error) {
-      console.error('Match sync error:', error);
       const errorMessage = error.response?.data?.message || 'Failed to sync matches';
       toast.error(errorMessage);
       setMatchSyncStatus('idle');
@@ -209,9 +205,7 @@ export default function Admin() {
             {/* Right logout */}
             <button
               onClick={() => {
-                localStorage.removeItem('access_token');
-                localStorage.removeItem('user_data');
-                navigate('/login');
+                clearAuthAndRedirect(navigate, '/login');
               }}
               className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 rounded-xl transition-all duration-300"
             >

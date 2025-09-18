@@ -66,8 +66,9 @@ export default function LeagueDetail() {
           setLeague(leagueResponse.data.data);
         }
       } catch (err) {
-        setError('Failed to load league data');
-        toast.error('Failed to load league details. Please try again.');
+        const errorMessage = err.response?.data?.message || 'Failed to load league details. Please try again.';
+        setError(errorMessage);
+        toast.error(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -405,7 +406,6 @@ export default function LeagueDetail() {
                                   }
                                   return '';
                                 } catch (error) {
-                                  console.error('Date parsing error:', error);
                                   return '';
                                 }
                               })()
@@ -423,7 +423,6 @@ export default function LeagueDetail() {
                                 setSearchParams({ ...obj, date: formattedDate, pageNumber: 1 });
                               }
                             } catch (error) {
-                              console.error('Date conversion error:', error);
                               // Clear date if conversion fails
                               setSearchParams({ ...obj, date: '', pageNumber: 1 });
                             }

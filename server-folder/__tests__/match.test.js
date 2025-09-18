@@ -517,9 +517,9 @@ describe('Match Controller', () => {
       const response = await request(app)
         .post('/api/v1/matches/sync/1')
         .set('Authorization', `Bearer ${userToken}`)
-        .expect(401);
+        .expect(403);
 
-      expect(response.body).toHaveProperty('message', 'Admin access required');
+      expect(response.body).toHaveProperty('message', 'Access denied. Admin role required.');
     });
 
     it('should return 400 for invalid league ID', async () => {

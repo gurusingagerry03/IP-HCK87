@@ -772,13 +772,14 @@ describe('User', () => {
 
   describe('GET /api/v1/users/:id', () => {
     it('should get user by id successfully', async () => {
+      const now = new Date();
       const mockUser = {
         id: 1,
         email: 'test@example.com',
         fullname: 'Test User',
         role: 'user',
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: now,
+        updatedAt: now,
       };
 
       User.findByPk = jest.fn().mockResolvedValue(mockUser);
@@ -786,7 +787,11 @@ describe('User', () => {
       const response = await request(app).get('/api/v1/users/1').expect(200);
 
       expect(response.body).toHaveProperty('success', true);
-      expect(response.body.data).toEqual(mockUser);
+      expect(response.body.data).toEqual({
+        ...mockUser,
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString(),
+      });
       expect(User.findByPk).toHaveBeenCalledWith('1');
     });
 

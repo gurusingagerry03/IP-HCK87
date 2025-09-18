@@ -1,16 +1,15 @@
 import { motion, useInView } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchLeague } from '../store/leagueSlice';
+import { useLeaguesState, useLeaguesDispatch } from '../store/hooks';
 
 export function FeaturedLeaguesSection() {
-  const { leagues } = useSelector((state) => state.leagues);
+  const { leagues } = useLeaguesState();
+  const { fetchLeagues } = useLeaguesDispatch();
 
-  const dispatch = useDispatch();
   useEffect(() => {
-    dispatch(fetchLeague());
-  }, []);
+    fetchLeagues();
+  }, [fetchLeagues]);
 
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, amount: 0.2 });

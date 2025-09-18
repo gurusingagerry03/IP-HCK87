@@ -1,21 +1,17 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router';
+import { getUser, clearAuthAndRedirect } from '../helpers/auth.jsx';
 
 export default function Profile() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
 
-  // Load user data from localStorage
+  // Load user data from auth helper
   useEffect(() => {
-    const userData = localStorage.getItem('user_data');
+    const userData = getUser();
     if (userData) {
-      try {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
-      } catch (error) {
-        navigate('/login');
-      }
+      setUser(userData);
     } else {
       navigate('/login');
     }
@@ -102,9 +98,7 @@ export default function Profile() {
               <button
                 type="button"
                 onClick={() => {
-                  localStorage.removeItem('access_token');
-                  localStorage.removeItem('user_data');
-                  navigate('/login');
+                  clearAuthAndRedirect(navigate, '/login');
                 }}
                 className="flex items-center justify-center gap-2 px-6 py-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl hover:bg-red-500/20 hover:border-red-500/50 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
               >

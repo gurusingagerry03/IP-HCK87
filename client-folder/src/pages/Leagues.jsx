@@ -1,17 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchLeague } from '../store/leagueSlice';
+import { useLeagues } from '../store/hooks';
 
 export default function Leagues() {
-  const { leagues, loading } = useSelector((state) => state.leagues);
-
-  const dispatch = useDispatch();
-
-  useEffect(() => {
-    dispatch(fetchLeague());
-  }, []);
+  const { leagues, loading, error } = useLeagues();
 
   const leagueStats = [
     { label: 'Total Leagues', value: '100+', icon: '🏆' },
@@ -19,6 +12,28 @@ export default function Leagues() {
     { label: 'Total Teams', value: '2000+', icon: '⚽' },
     { label: 'Active Seasons', value: '2025/26', icon: '📅' },
   ];
+
+  if (error) {
+    return (
+      <div className="min-h-screen py-16 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8 max-w-md mx-4"
+        >
+          <div className="text-6xl mb-4">⚠️</div>
+          <h2 className="text-white text-2xl font-bold mb-4">Error Loading Leagues</h2>
+          <p className="text-white/60 mb-6">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-gradient-to-r from-accent to-orange-500 text-white font-semibold rounded-xl hover:from-orange-500 hover:to-accent transition-all duration-300"
+          >
+            Try Again
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen py-16">

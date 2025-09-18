@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router';
-import { getAuthStatus, logout } from '../helpers/auth.js';
+import { getAuthStatus, logout } from '../helpers/auth.jsx';
 
 const links = [
   { to: '/', label: 'Home' },

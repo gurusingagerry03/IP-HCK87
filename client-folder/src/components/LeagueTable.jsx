@@ -27,8 +27,9 @@ export default function LeagueTable({ leagueId }) {
         setStandings(calculatedStandings);
       }
     } catch (err) {
-      setError('Failed to load league table');
-      toast.error('Failed to load league table. Please try again.');
+      const errorMessage = err.response?.data?.message || 'Failed to load league table. Please try again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

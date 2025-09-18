@@ -3,49 +3,24 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router';
 import toast from 'react-hot-toast';
 import http from '../helpers/http';
+import { getToken, isLoggedIn, getAuthHeaders } from '../helpers/auth.jsx';
+import { useFavoritesState, useFavoritesDispatch } from '../store/hooks';
 
 export default function Favorites() {
-  const [favorites, setFavorites] = useState([]);
+  const { favorites, loading, error } = useFavoritesState();
+  const { fetchFavorites } = useFavoritesDispatch();
   const [filterBy, setFilterBy] = useState('all');
-  const [loading, setLoading] = useState(true);
 
   // Load favorites from database on component mount
   useEffect(() => {
-    const fetchFavorites = async () => {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        setFavorites([]);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const response = await http.get('/favorites', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (response.data.success) {
-          setFavorites(response.data.data || []);
-        }
-      } catch (error) {
-        // Silent error - user might not be logged in
-        setFavorites([]);
-        if (error.response?.status === 401) {
-          toast.error('Please login to view your favorites');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
+    if (!isLoggedIn()) {
+      return;
+    }
     fetchFavorites();
-  }, []);
+  }, [fetchFavorites]);
 
   const removeFavorite = async (favoriteId) => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
+    if (!isLoggedIn()) {
       toast.error('Please login to remove favorites');
       return;
     }
@@ -54,21 +29,20 @@ export default function Favorites() {
       await http({
         method: 'delete',
         url: `/favorites/${favoriteId}`,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: getAuthHeaders(),
       });
 
-      setFavorites((prev) => prev.filter((fav) => fav.id !== favoriteId));
+      // Refetch favorites to get updated data
+      fetchFavorites();
       toast.success('Team removed from favorites!');
     } catch (error) {
-      toast.error('Failed to remove favorite. Please try again.');
+      const errorMessage = error.response?.data?.message || 'Failed to remove favorite. Please try again.';
+      toast.error(errorMessage);
     }
   };
 
   const clearAllFavorites = async () => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
+    if (!isLoggedIn()) {
       toast.error('Please login to clear favorites');
       return;
     }
@@ -79,17 +53,17 @@ export default function Favorites() {
         http({
           method: 'delete',
           url: `/favorites/${fav.id}`,
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: getAuthHeaders(),
         })
       );
 
       await Promise.all(deletePromises);
-      setFavorites([]);
+      // Refetch favorites to get updated data
+      fetchFavorites();
       toast.success('All favorites cleared!');
     } catch (error) {
-      toast.error('Failed to clear favorites. Please try again.');
+      const errorMessage = error.response?.data?.message || 'Failed to clear favorites. Please try again.';
+      toast.error(errorMessage);
     }
   };
 
@@ -122,8 +96,8 @@ export default function Favorites() {
   }
 
   // Check if user is logged in
-  const isLoggedIn = localStorage.getItem('access_token');
-  if (!isLoggedIn) {
+  const userLoggedIn = isLoggedIn();
+  if (!userLoggedIn) {
     return (
       <div className="min-h-screen py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

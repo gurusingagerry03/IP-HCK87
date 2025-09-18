@@ -268,9 +268,9 @@ describe('League', () => {
           leagueName: 'Premier League',
           leagueCountry: 'England',
         })
-        .expect(401);
+        .expect(403);
 
-      expect(response.body).toHaveProperty('message', 'Admin access required');
+      expect(response.body).toHaveProperty('message', 'Access denied. Admin role required.');
     });
 
     it('should return 400 when leagueName is missing', async () => {

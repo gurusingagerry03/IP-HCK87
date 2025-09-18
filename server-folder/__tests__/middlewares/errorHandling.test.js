@@ -108,6 +108,7 @@ describe('Error Handling Middleware', () => {
 
       expect(response.body).toEqual({
         message: 'Forbidden Access',
+        success: false,
       });
     });
 
@@ -123,6 +124,7 @@ describe('Error Handling Middleware', () => {
 
       expect(response.body).toEqual({
         message: 'Resource not found',
+        success: false,
       });
     });
 
@@ -183,6 +185,7 @@ describe('Error Handling Middleware', () => {
 
       expect(response.body).toEqual({
         message: 'Access denied',
+        success: false,
       });
     });
 
@@ -198,6 +201,7 @@ describe('Error Handling Middleware', () => {
 
       expect(response.body).toEqual({
         message: 'Access denied',
+        success: false,
       });
     });
 

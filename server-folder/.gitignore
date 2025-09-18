@@ -1,3 +1,7 @@
 node_modules
 .env
-.coverage
+coverage
+.nyc_output
+lcov.info
+coverage/
+/.nyc_output

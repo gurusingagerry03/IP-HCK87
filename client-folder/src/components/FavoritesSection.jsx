@@ -1,6 +1,7 @@
 import { motion, useInView } from 'framer-motion';
 import { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router';
+import { isLoggedIn as checkIsLoggedIn, getAuthHeaders } from '../helpers/auth.jsx';
 
 export function FavoriteSection() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -11,8 +12,7 @@ export function FavoriteSection() {
   // Check authentication
   useEffect(() => {
     const checkAuth = () => {
-      const token = localStorage.getItem('access_token');
-      setIsLoggedIn(!!token);
+      setIsLoggedIn(checkIsLoggedIn());
     };
 
     checkAuth();

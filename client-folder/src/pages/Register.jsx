@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router';
 import toast from 'react-hot-toast';
 import http from '../helpers/http';
+import { setAuthData } from '../helpers/auth.jsx';
 
 export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
@@ -72,8 +73,7 @@ export default function Register() {
           googleToken: res.credential,
         },
       });
-      localStorage.setItem('access_token', response.data.data.access_token);
-      localStorage.setItem('user_data', JSON.stringify(response.data.data.user));
+      setAuthData(response.data.data.access_token, response.data.data.user);
       toast.success('Successfully logged in with Google!');
       navigate('/');
     } catch (error) {
