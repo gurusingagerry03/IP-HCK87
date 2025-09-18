@@ -35,7 +35,8 @@ export const fetchLeague = createAsyncThunk(
       const response = await http.get('/leagues');
       return response.data.data;
     } catch (error) {
-      toast('Failed to fetch leagues', { icon: '❌' });
+      const errorMessage = error.response?.data?.message || 'Failed to fetch leagues';
+      toast.error(errorMessage);
       throw error;
     }
   }

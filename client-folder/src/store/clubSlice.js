@@ -31,12 +31,12 @@ const clubSlice = createSlice({
 export const clubReducer = clubSlice.reducer;
 
 export const fetchClub = createAsyncThunk('name/club', async function fetchClub(params, thunkAPI) {
-  console.log('🌐 FETCH CLUBS called with params:', params);
   try {
     const response = await http.get('/teams', { params });
     return response.data;
   } catch (error) {
-    toast('Failed to fetch teams', { icon: '❌' });
+    const errorMessage = error.response?.data?.message || 'Failed to fetch teams';
+    toast.error(errorMessage);
     throw error;
   }
 });

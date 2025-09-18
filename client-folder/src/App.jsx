@@ -18,7 +18,7 @@ import { Route, Routes, Outlet, Navigate } from 'react-router';
 import { BrowserRouter } from 'react-router';
 import { Provider } from 'react-redux';
 import { store } from './store/index.js';
-import { getAuthStatus } from './helpers/auth.jsx';
+import { getAuthStatus } from './helpers/auth.js';
 
 // Protected Route Component untuk halaman yang memerlukan auth
 function ProtectedRoute({ children }) {

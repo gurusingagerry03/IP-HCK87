@@ -31,9 +31,8 @@ export default function MatchSummary() {
           setError('Match not found');
         }
       } catch (err) {
-        const errorMessage = err.response?.data?.message || 'Failed to load match data. Please try again.';
-        setError(errorMessage);
-        toast.error(errorMessage);
+        setError('Failed to load match data');
+        toast.error('Failed to load match data. Please try again.');
       } finally {
         setLoading(false);
       }

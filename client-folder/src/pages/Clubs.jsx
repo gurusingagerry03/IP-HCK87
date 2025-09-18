@@ -4,13 +4,11 @@ import { Link } from 'react-router';
 import toast from 'react-hot-toast';
 import http from '../helpers/http';
 import { useSearchParams } from 'react-router';
-// import { useClubsState, useClubsDispatch, useFavorites } from '../store/hooks'; // TEMPORARILY DISABLED FOR DEBUGGING
-import { getToken, isLoggedIn } from '../helpers/auth.jsx';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchClub } from '../store/clubSlice';
 
 export default function Clubs() {
   const [allTeams, setAllTeams] = useState([]);
-  // TEMPORARILY DISABLED REDUX FOR DEBUGGING
-  // const { favorites, refetch: refetchFavorites } = useFavorites();
   const [favorites, setFavorites] = useState([]);
   const [addingFavorites, setAddingFavorites] = useState(new Set());
   const [searchParams, setSearchParams] = useSearchParams({
@@ -21,40 +19,25 @@ export default function Clubs() {
     pageSize: 9,
   });
 
-  // TEMPORARILY USE MANUAL STATE FOR DEBUGGING
-  const [teams, setTeams] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [meta, setMeta] = useState({ page: 1, totalPages: 1, total: 0 });
+  const { teams, loading, error, meta } = useSelector((state) => state.clubs);
+
+  const dispatch = useDispatch();
 
   useEffect(() => {
-    const fetchTeams = async () => {
-      setLoading(true);
-      try {
-        const q = searchParams.get('q');
-        const filter = searchParams.get('filter');
-        const sort = searchParams.get('sort');
-        const pageNumber = searchParams.get('pageNumber');
-        const pageSize = searchParams.get('pageSize');
+    const q = searchParams.get('q');
+    const filter = searchParams.get('filter');
+    const sort = searchParams.get('sort');
+    const pageNumber = searchParams.get('pageNumber');
+    const pageSize = searchParams.get('pageSize');
 
-        const params = {};
-        if (q) params.q = q;
-        if (filter) params.filter = filter;
-        if (sort) params.sort = sort;
-        if (pageSize) params['page[size]'] = pageSize;
-        if (pageNumber) params['page[number]'] = pageNumber;
+    const params = {};
+    if (q) params.q = q;
+    if (filter) params.filter = filter;
+    if (sort) params.sort = sort;
+    if (pageSize) params['page[size]'] = pageSize;
+    if (pageNumber) params['page[number]'] = pageNumber;
 
-        const response = await http.get('/teams', { params });
-        setTeams(response.data.data || []);
-        setMeta(response.data.meta || { page: 1, totalPages: 1, total: 0 });
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTeams();
+    dispatch(fetchClub(params));
   }, [searchParams]);
 
   const obj = Object.fromEntries(searchParams.entries());
@@ -79,21 +62,27 @@ export default function Clubs() {
     fetchAllTeams();
   }, []);
 
-  // Fetch favorites manually for debugging
+  // Fetch user's favorites from database
   useEffect(() => {
     const fetchFavorites = async () => {
-      if (!isLoggedIn()) {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
         setFavorites([]);
         return;
       }
+
       try {
         const response = await http.get('/favorites', {
-          headers: { Authorization: `Bearer ${getToken()}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
+
         if (response.data.success) {
           setFavorites(response.data.data || []);
         }
       } catch (error) {
+        // Silent error - user might not be logged in
         setFavorites([]);
       }
     };
@@ -102,7 +91,8 @@ export default function Clubs() {
   }, []);
 
   const handleFavoriteToggle = async (team) => {
-    if (!isLoggedIn()) {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
       toast.error('Please login to add favorites');
       return;
     }
@@ -123,13 +113,7 @@ export default function Clubs() {
             Authorization: `Bearer ${token}`,
           },
         });
-        // Refetch favorites to get updated data
-        const response = await http.get('/favorites', {
-          headers: { Authorization: `Bearer ${getToken()}` },
-        });
-        if (response.data.success) {
-          setFavorites(response.data.data || []);
-        }
+        setFavorites((prev) => prev.filter((fav) => fav.Team?.id !== team.id));
         toast.success('Team removed from favorites!');
       } else {
         // Add to favorites
@@ -141,13 +125,17 @@ export default function Clubs() {
           },
         });
 
-        // Refetch favorites to get updated data
+        // Refetch favorites to get the complete data structure
         const response = await http.get('/favorites', {
-          headers: { Authorization: `Bearer ${getToken()}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
+
         if (response.data.success) {
           setFavorites(response.data.data || []);
         }
+
         toast.success('Team added to favorites!');
       }
     } catch (error) {
@@ -295,9 +283,9 @@ export default function Clubs() {
             : teams.map((team, index) => (
                 <motion.div
                   key={team.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.2 }}
+                  initial={{ opacity: 0, y: 40 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 * index }}
                   className="group relative bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border border-white/20 rounded-3xl p-8 hover:from-white/15 hover:to-white/10 hover:border-accent/30 transition-all duration-500"
                 >
                   <div className="flex justify-center mb-6">

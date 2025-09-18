@@ -1,3 +1,5 @@
+// Helper functions for authentication
+
 export const getAuthStatus = () => {
   const token = localStorage.getItem('access_token');
   const userData = localStorage.getItem('user_data');
@@ -10,6 +12,7 @@ export const getAuthStatus = () => {
     const user = JSON.parse(userData);
     return { isLoggedIn: true, user };
   } catch (error) {
+    // If parsing fails, clear invalid data
     localStorage.removeItem('access_token');
     localStorage.removeItem('user_data');
     return { isLoggedIn: false, user: null };
@@ -24,4 +27,13 @@ export const isAdmin = () => {
 export const logout = () => {
   localStorage.removeItem('access_token');
   localStorage.removeItem('user_data');
+};
+
+export const getToken = () => {
+  return localStorage.getItem('access_token');
+};
+
+export const getUser = () => {
+  const { user } = getAuthStatus();
+  return user;
 };

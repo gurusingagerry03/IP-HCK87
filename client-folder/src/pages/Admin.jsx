@@ -3,15 +3,9 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router';
 import toast from 'react-hot-toast';
 import http from '../helpers/http';
-import { getAuthHeaders, clearAuthAndRedirect } from '../helpers/auth.jsx';
-// import { useMatches, usePlayers } from '../store/hooks'; // TEMPORARILY DISABLED FOR DEBUGGING
 
 export default function Admin() {
   const navigate = useNavigate();
-  // TEMPORARILY DISABLED REDUX FOR DEBUGGING
-  // const { matches: matchesData = [], loading: matchesLoading } = useMatches({}, false);
-  // const { players: playersData = [], loading: playersLoading } = usePlayers({}, false);
-
   const [createStatus, setCreateStatus] = useState('idle'); // idle, creating, success, error
   const [leagueName, setLeagueName] = useState('');
   const [country, setCountry] = useState('');
@@ -45,26 +39,23 @@ export default function Admin() {
         const teamsResponse = await http.get('/teams');
         const teamsData = teamsResponse.data.data || teamsResponse.data || [];
 
-        // Use direct HTTP calls (NO REDUX) for debugging
-        let totalPlayers = 0;
-        let totalMatches = 0;
-        let completedMatches = 0;
-        let upcomingMatches = 0;
-
-        // Direct HTTP calls
+        // Fetch players count (loop through teams to get total players)
         const playersResponse = await http.get('/players');
-        totalPlayers = playersResponse.data.data?.length || playersResponse.data?.length || 0;
+        let totalPlayers = playersResponse.data.data.length || playersResponse.data.length || 0;
 
+        // Fetch matches data (get all matches from new endpoint)
         const matchesResponse = await http.get('/matches');
-        const matchesDataFromHttp = matchesResponse.data.data || matchesResponse.data || [];
-        totalMatches = matchesDataFromHttp.length;
+        const matchesData = matchesResponse.data.data || matchesResponse.data || [];
 
-        completedMatches = matchesDataFromHttp.filter(
+        const totalMatches = matchesData.length;
+
+        // Count completed and upcoming matches based on status from database
+        const completedMatches = matchesData.filter(
           (match) =>
             match.status === 'finished' || match.status === 'completed' || match.status === 'FT'
         ).length;
 
-        upcomingMatches = matchesDataFromHttp.filter(
+        const upcomingMatches = matchesData.filter(
           (match) =>
             match.status === 'scheduled' || match.status === 'upcoming' || match.status === 'NS'
         ).length;
@@ -83,7 +74,8 @@ export default function Admin() {
           upcomingMatches,
         }));
       } catch (error) {
-        toast.error('Failed to load data');
+        const errorMessage = error.response?.data?.message || 'Failed to load data';
+        toast.error(errorMessage);
       } finally {
         setLoadingLeagues(false);
       }
@@ -104,7 +96,7 @@ export default function Admin() {
         method: 'POST',
         url: '/leagues/sync',
         data: { leagueName: leagueName.trim(), leagueCountry: country.trim() },
-        headers: { ...getAuthHeaders() },
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
       });
 
       setCreateStatus('success');
@@ -137,7 +129,7 @@ export default function Admin() {
       await http({
         method: 'POST',
         url: `/teams/sync/${selectedLeagueForTeams}`,
-        headers: { ...getAuthHeaders() },
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
       });
 
       setTeamPlayerSyncStatus('success');
@@ -167,7 +159,7 @@ export default function Admin() {
       await http({
         method: 'POST',
         url: `/matches/sync/${selectedLeagueForMatches}`,
-        headers: { ...getAuthHeaders() },
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
       });
 
       setMatchSyncStatus('success');
@@ -214,7 +206,9 @@ export default function Admin() {
             {/* Right logout */}
             <button
               onClick={() => {
-                clearAuthAndRedirect(navigate, '/login');
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('user_data');
+                navigate('/login');
               }}
               className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 rounded-xl transition-all duration-300"
             >
