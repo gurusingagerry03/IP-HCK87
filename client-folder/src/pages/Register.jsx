@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router';
 import toast from 'react-hot-toast';
-import { useAuth } from '../helpers/auth.jsx';
 import http from '../helpers/http';
 
 export default function Register() {
@@ -18,7 +17,6 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -74,7 +72,11 @@ export default function Register() {
           googleToken: res.credential,
         },
       });
-      login(response.data.data.user, response.data.data.access_token);
+
+      // Simpan ke localStorage
+      localStorage.setItem('access_token', response.data.data.access_token);
+      localStorage.setItem('user_data', JSON.stringify(response.data.data.user));
+
       toast.success('Successfully logged in with Google!');
       navigate('/');
     } catch (error) {

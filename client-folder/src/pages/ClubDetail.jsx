@@ -2,13 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { useAuth } from '../helpers/auth.jsx';
+import { getAuthStatus, getToken } from '../helpers/auth.jsx';
 import http from '../helpers/http';
 
 export default function ClubDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isLoggedIn, getToken } = useAuth();
+  const { isLoggedIn } = getAuthStatus();
   const [club, setClub] = useState(null);
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -87,7 +87,7 @@ export default function ClubDetail() {
         setIsFavorited(false);
         return;
       }
-      
+
       const token = getToken();
 
       try {
@@ -202,7 +202,7 @@ export default function ClubDetail() {
       toast.error('Please login to add favorites');
       return;
     }
-    
+
     const token = getToken();
 
     try {

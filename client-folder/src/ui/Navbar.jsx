@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router';
-import { getAuthStatus, logout } from '../helpers/auth.js';
+import { getAuthStatus, getUser, logoutUser } from '../helpers/auth.jsx';
+import toast from 'react-hot-toast';
 
 const links = [
   { to: '/', label: 'Home' },
@@ -22,21 +23,12 @@ const slideInLeftKeyframes = `
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [user, setUser] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Check authentication status
-  useEffect(() => {
-    const checkAuth = () => {
-      const { isLoggedIn: loggedIn, user: userData } = getAuthStatus();
-      setIsLoggedIn(loggedIn);
-      setUser(userData);
-    };
-
-    checkAuth();
-  }, [location.pathname]); // Re-check when location changes
+  // Get auth status and user data
+  const { isLoggedIn } = getAuthStatus();
+  const user = getUser();
 
   // Langsung ke atas (tanpa smooth) setiap route berubah
   useEffect(() => {
@@ -51,11 +43,10 @@ export default function Navbar() {
 
   const handleLogout = () => {
     // Clear authentication
-    logout();
+    logoutUser();
+    toast.success('Logged out successfully');
 
     // Clear state
-    setUser(null);
-    setIsLoggedIn(false);
     setShowUserMenu(false);
 
     // Navigate to login page

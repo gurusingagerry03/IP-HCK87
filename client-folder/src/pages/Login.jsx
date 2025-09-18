@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router';
 import toast from 'react-hot-toast';
-import { useAuth } from '../helpers/auth.jsx';
+import { getAuthStatus } from '../helpers/auth.jsx';
 import http from '../helpers/http';
 
 export default function Login() {
@@ -11,7 +11,6 @@ export default function Login() {
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -33,7 +32,10 @@ export default function Login() {
 
       // Jika login berhasil, simpan token dan user data
       if (response.data.success && response.data.data.access_token) {
-        login(response.data.data.user, response.data.data.access_token);
+        // Simpan ke localStorage
+        localStorage.setItem('access_token', response.data.data.access_token);
+        localStorage.setItem('user_data', JSON.stringify(response.data.data.user));
+
         toast.success('Login successful! Welcome back.');
 
         // Redirect admin to admin panel, regular users to home
@@ -70,7 +72,11 @@ export default function Login() {
           googleToken: res.credential,
         },
       });
-      login(response.data.data.user, response.data.data.access_token);
+
+      // Simpan ke localStorage
+      localStorage.setItem('access_token', response.data.data.access_token);
+      localStorage.setItem('user_data', JSON.stringify(response.data.data.user));
+
       toast.success('Successfully logged in with Google!');
 
       // Redirect admin to admin panel, regular users to home

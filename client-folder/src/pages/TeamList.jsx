@@ -3,13 +3,12 @@ import { useNavigate, useSearchParams } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchClub } from '../store/clubSlice';
 import toast from 'react-hot-toast';
-import { useAuth } from '../helpers/auth.jsx';
+import { isAdminUser, getToken } from '../helpers/auth.jsx';
 import http from '../helpers/http.jsx';
 
 export default function TeamList() {
   const dispatch = useDispatch();
   const { teams, meta, loading, error } = useSelector((state) => state.clubs);
-  const { isAdmin, getToken } = useAuth();
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const totalPages = meta.totalPages || 0;

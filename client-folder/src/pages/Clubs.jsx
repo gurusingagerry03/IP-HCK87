@@ -6,10 +6,10 @@ import http from '../helpers/http';
 import { useSearchParams } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchClub } from '../store/clubSlice';
-import { useAuth } from '../helpers/auth.jsx';
+import { getAuthStatus, getToken } from '../helpers/auth.jsx';
 
 export default function Clubs() {
-  const { isLoggedIn, getToken } = useAuth();
+  const { isLoggedIn } = getAuthStatus();
   const [allTeams, setAllTeams] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [addingFavorites, setAddingFavorites] = useState(new Set());
@@ -71,7 +71,7 @@ export default function Clubs() {
         setFavorites([]);
         return;
       }
-      
+
       const token = getToken();
 
       try {
@@ -98,7 +98,7 @@ export default function Clubs() {
       toast.error('Please login to add favorites');
       return;
     }
-    
+
     const token = getToken();
 
     const isCurrentlyFavorite = favorites.some((fav) => fav.Team?.id === team.id);

@@ -13,12 +13,11 @@ import MatchSummary from './pages/MatchSummary.jsx';
 import MatchPrediction from './pages/MatchPrediction.jsx';
 import Admin from './pages/Admin.jsx';
 import TeamList from './pages/TeamList.jsx';
-import ApiTest from './components/ApiTest.jsx';
 import { Route, Routes, Outlet, Navigate } from 'react-router';
 import { BrowserRouter } from 'react-router';
 import { Provider } from 'react-redux';
 import { store } from './store/index.js';
-import { getAuthStatus } from './helpers/auth.js';
+import { getAuthStatus, isAdminUser } from './helpers/auth.jsx';
 
 // Protected Route Component untuk halaman yang memerlukan auth
 function ProtectedRoute({ children }) {
@@ -33,14 +32,31 @@ function ProtectedRoute({ children }) {
 
 // Admin Protected Route Component untuk halaman yang hanya bisa diakses admin
 function AdminProtectedRoute({ children }) {
-  const { isLoggedIn, user } = getAuthStatus();
+  const { isLoggedIn } = getAuthStatus();
+  const isAdmin = isAdminUser();
 
   if (!isLoggedIn) {
     return <Navigate to="/login" />;
   }
 
-  if (user?.role !== 'admin') {
+  if (!isAdmin) {
     return <Navigate to="/" />;
+  }
+
+  return children;
+}
+
+// Auth Redirect Component untuk mencegah user yang sudah login mengakses login/register
+function AuthRedirectRoute({ children }) {
+  const { isLoggedIn } = getAuthStatus();
+  const isAdmin = isAdminUser();
+
+  if (isLoggedIn) {
+    if (isAdmin) {
+      return <Navigate to="/admin" replace />;
+    } else {
+      return <Navigate to="/" replace />;
+    }
   }
 
   return children;
@@ -77,9 +93,22 @@ function MainRoute() {
         <Route path="/" element={<Home />} />
         <Route path="/clubs" element={<Clubs />} />
         <Route path="/leagues" element={<Leagues />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/test" element={<ApiTest />} />
+        <Route
+          path="/login"
+          element={
+            <AuthRedirectRoute>
+              <Login />
+            </AuthRedirectRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <AuthRedirectRoute>
+              <Register />
+            </AuthRedirectRoute>
+          }
+        />
 
         {/* Only Favorites and Profile require authentication */}
         <Route

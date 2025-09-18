@@ -2,14 +2,14 @@ import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router';
 import toast from 'react-hot-toast';
-import { useAuth } from '../helpers/auth.jsx';
+import { getAuthStatus, getToken } from '../helpers/auth.jsx';
 import http from '../helpers/http';
 
 export default function Favorites() {
   const [favorites, setFavorites] = useState([]);
   const [filterBy, setFilterBy] = useState('all');
   const [loading, setLoading] = useState(true);
-  const { isLoggedIn, getToken } = useAuth();
+  const { isLoggedIn } = getAuthStatus();
 
   // Load favorites from database on component mount
   useEffect(() => {
@@ -19,7 +19,7 @@ export default function Favorites() {
         setLoading(false);
         return;
       }
-      
+
       const token = getToken();
 
       try {
@@ -51,7 +51,7 @@ export default function Favorites() {
       toast.error('Please login to remove favorites');
       return;
     }
-    
+
     const token = getToken();
 
     try {
@@ -75,7 +75,7 @@ export default function Favorites() {
       toast.error('Please login to clear favorites');
       return;
     }
-    
+
     const token = getToken();
 
     try {

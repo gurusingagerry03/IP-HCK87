@@ -1,11 +1,13 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router';
-import { useAuth } from '../helpers/auth.jsx';
+import { getAuthStatus, getUser, logoutUser } from '../helpers/auth.jsx';
+import toast from 'react-hot-toast';
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, isLoggedIn, logout } = useAuth();
+  const { isLoggedIn } = getAuthStatus();
+  const user = getUser();
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -94,7 +96,8 @@ export default function Profile() {
               <button
                 type="button"
                 onClick={() => {
-                  logout();
+                  logoutUser();
+                  toast.success('Logged out successfully');
                   navigate('/login');
                 }}
                 className="flex items-center justify-center gap-2 px-6 py-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl hover:bg-red-500/20 hover:border-red-500/50 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"

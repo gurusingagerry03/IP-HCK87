@@ -2,12 +2,11 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router';
 import toast from 'react-hot-toast';
-import { useAuth } from '../helpers/auth.jsx';
+import { getToken, logoutUser, isAdminUser } from '../helpers/auth.jsx';
 import http from '../helpers/http';
 
 export default function Admin() {
   const navigate = useNavigate();
-  const { getToken, logout, isAdmin } = useAuth();
   const [createStatus, setCreateStatus] = useState('idle'); // idle, creating, success, error
   const [leagueName, setLeagueName] = useState('');
   const [country, setCountry] = useState('');
@@ -27,70 +26,71 @@ export default function Admin() {
     upcomingMatches: 0,
   });
 
+  // Function to fetch all data and update stats
+  const fetchAllData = async () => {
+    try {
+      setLoadingLeagues(true);
+
+      // Fetch leagues
+      const leaguesResponse = await http.get('/leagues');
+      const leaguesData = leaguesResponse.data.data || leaguesResponse.data || [];
+      setLeagues(leaguesData);
+
+      // Fetch teams (get all teams without query parameters)
+      const teamsResponse = await http.get('/teams');
+      const teamsData = teamsResponse.data.data || teamsResponse.data || [];
+
+      // Fetch players count (loop through teams to get total players)
+      const playersResponse = await http.get('/players');
+      let totalPlayers = playersResponse.data.data.length || playersResponse.data.length || 0;
+
+      // Fetch matches data (get all matches from new endpoint)
+      const matchesResponse = await http.get('/matches');
+      const matchesData = matchesResponse.data.data || matchesResponse.data || [];
+
+      const totalMatches = matchesData.length;
+
+      // Count completed and upcoming matches based on status from database
+      const completedMatches = matchesData.filter(
+        (match) =>
+          match.status === 'finished' || match.status === 'completed' || match.status === 'FT'
+      ).length;
+
+      const upcomingMatches = matchesData.filter(
+        (match) =>
+          match.status === 'scheduled' || match.status === 'upcoming' || match.status === 'NS'
+      ).length;
+
+      // Calculate stats
+      const totalLeagues = leaguesData.length;
+      const totalTeams = teamsData.length;
+
+      setStats((prevStats) => ({
+        ...prevStats,
+        totalLeagues,
+        totalTeams,
+        totalPlayers,
+        totalMatches,
+        completedMatches,
+        upcomingMatches,
+      }));
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Failed to load data';
+      toast.error(errorMessage);
+    } finally {
+      setLoadingLeagues(false);
+    }
+  };
+
   useEffect(() => {
     // Check if user is admin
-    if (!isAdmin()) {
+    if (!isAdminUser()) {
       toast.error('Admin access required');
       navigate('/login');
       return;
     }
-    
-    const fetchInitialData = async () => {
-      try {
-        setLoadingLeagues(true);
 
-        // Fetch leagues
-        const leaguesResponse = await http.get('/leagues');
-        const leaguesData = leaguesResponse.data.data || leaguesResponse.data || [];
-        setLeagues(leaguesData);
-
-        // Fetch teams (get all teams without query parameters)
-        const teamsResponse = await http.get('/teams');
-        const teamsData = teamsResponse.data.data || teamsResponse.data || [];
-
-        // Fetch players count (loop through teams to get total players)
-        const playersResponse = await http.get('/players');
-        let totalPlayers = playersResponse.data.data.length || playersResponse.data.length || 0;
-
-        // Fetch matches data (get all matches from new endpoint)
-        const matchesResponse = await http.get('/matches');
-        const matchesData = matchesResponse.data.data || matchesResponse.data || [];
-
-        const totalMatches = matchesData.length;
-
-        // Count completed and upcoming matches based on status from database
-        const completedMatches = matchesData.filter(
-          (match) =>
-            match.status === 'finished' || match.status === 'completed' || match.status === 'FT'
-        ).length;
-
-        const upcomingMatches = matchesData.filter(
-          (match) =>
-            match.status === 'scheduled' || match.status === 'upcoming' || match.status === 'NS'
-        ).length;
-
-        // Calculate stats
-        const totalLeagues = leaguesData.length;
-        const totalTeams = teamsData.length;
-
-        setStats((prevStats) => ({
-          ...prevStats,
-          totalLeagues,
-          totalTeams,
-          totalPlayers,
-          totalMatches,
-          completedMatches,
-          upcomingMatches,
-        }));
-      } catch (error) {
-        const errorMessage = error.response?.data?.message || 'Failed to load data';
-        toast.error(errorMessage);
-      } finally {
-        setLoadingLeagues(false);
-      }
-    };
-
-    fetchInitialData();
+    fetchAllData();
   }, []);
 
   const handleCreateLeague = async () => {
@@ -113,9 +113,8 @@ export default function Admin() {
       setLeagueName('');
       setCountry('');
 
-      // Refresh leagues after sync
-      const response = await http.get('/leagues');
-      setLeagues(response.data.data || response.data || []);
+      // Refresh all data after sync
+      await fetchAllData();
 
       setTimeout(() => setCreateStatus('idle'), 3000);
     } catch (error) {
@@ -147,6 +146,10 @@ export default function Admin() {
           selectedLeague?.name || 'selected league'
         }" synchronized successfully!`
       );
+
+      // Refresh all data after sync
+      await fetchAllData();
+
       setTimeout(() => setTeamPlayerSyncStatus('idle'), 3000);
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Failed to sync teams and players';
@@ -175,6 +178,10 @@ export default function Admin() {
       toast.success(
         `Matches for "${selectedLeague?.name || 'selected league'}" synchronized successfully!`
       );
+
+      // Refresh all data after sync
+      await fetchAllData();
+
       setTimeout(() => setMatchSyncStatus('idle'), 3000);
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Failed to sync matches';
@@ -215,7 +222,8 @@ export default function Admin() {
             {/* Right logout */}
             <button
               onClick={() => {
-                logout();
+                logoutUser();
+                toast.success('Logged out successfully');
                 navigate('/login');
               }}
               className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 rounded-xl transition-all duration-300"
