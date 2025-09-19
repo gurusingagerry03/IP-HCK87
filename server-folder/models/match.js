@@ -46,6 +46,12 @@ module.exports = (sequelize, DataTypes) => {
       prediction: DataTypes.TEXT,
       predicted_score_home: DataTypes.INTEGER,
       predicted_score_away: DataTypes.INTEGER,
+      // Match Statistics stored as JSON array
+      statistics: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        defaultValue: [],
+      },
     },
     {
       sequelize,
