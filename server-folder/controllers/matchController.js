@@ -83,6 +83,8 @@ class matchController {
   //update match_overview and tactical_analysis
   static async updateMatchAnalysis(req, res, next) {
     try {
+      console.log('123');
+
       const { id } = req.params;
       let match_overview;
       let tactical_analysis;
@@ -113,19 +115,35 @@ class matchController {
         });
       }
       const prompt = `
-          You are given accurate football match data. 
+          You are given accurate football match data including statistics. 
           Your task is ONLY to generate two narrative fields: "match_overview" and "tactical_analysis". 
-          Do not invent statistics, referees, or numbers. Focus on natural sentences summarizing the match. 
+          Use the provided statistics to create realistic analysis, but do not invent additional numbers. 
+          Focus on natural sentences that incorporate the actual match statistics provided.
           Always respond in a valid JSON object with exactly these two fields.
 
-          match: ${match.HomeTeam.name} vs ${match.AwayTeam.name}
-          date: ${match.match_date}
-          competition: ${match.League.name}
+          Match Information:
+          - Teams: ${match.HomeTeam.name} vs ${match.AwayTeam.name}
+          - Date: ${match.match_date}
+          - Competition: ${match.League.name}
+          - Score: ${match.home_score || 'N/A'} - ${match.away_score || 'N/A'}
+          - Status: ${match.status}
+          
+          Match Statistics:
+          ${
+            match.statistics && match.statistics.length > 0
+              ? match.statistics
+                  .map(
+                    (stat) =>
+                      `- ${stat.type}: ${match.HomeTeam.name} ${stat.home} - ${stat.away} ${match.AwayTeam.name}`
+                  )
+                  .join('\n          ')
+              : '- No detailed statistics available'
+          }
 
           Output format (JSON only, no extra text):
         {
-          "match_overview": "Write 2–3 sentences describing the general overview of the match.",
-          "tactical_analysis": "Write a detailed tactical analysis paragraph."
+          "match_overview": "Write 2–3 sentences describing the general overview of the match, incorporating key statistics when available.",
+          "tactical_analysis": "Write a detailed tactical analysis paragraph that references the actual statistics provided above."
         }
       `;
       let response = await generateAi(prompt, 'gemini-2.5-flash-lite');
@@ -417,6 +435,7 @@ class matchController {
                   status: apiMatchData.match_status?.toLowerCase() || 'upcoming',
                   venue: homeTeam.stadiumName || null,
                   externalRef: apiMatchData.match_id,
+                  statistics: apiMatchData.statistics || [],
                 });
               }
             }
@@ -435,6 +454,7 @@ class matchController {
               'away_score',
               'status',
               'venue',
+              'statistics',
             ],
             returning: true,
           });
