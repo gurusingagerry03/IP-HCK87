@@ -1,10 +1,12 @@
 # Ninety Minutes API Documentation
 
 ## Base URL
+
 - Development: `http://localhost:3000`
 - API Version: `/api/v1`
 
 ## Overview
+
 The Ninety Minutes API is a comprehensive football/soccer management system that provides endpoints for managing users, leagues, teams, players, matches, and favorites. The API includes authentication, authorization, external data synchronization, and AI-powered features.
 
 ## Endpoints :
@@ -12,16 +14,19 @@ The Ninety Minutes API is a comprehensive football/soccer management system that
 List of available endpoints:
 
 **Authentication:**
+
 - `POST /api/v1/users/register`
 - `POST /api/v1/users/login`
 - `POST /api/v1/users/google-login`
 
 **Leagues:**
+
 - `GET /api/v1/leagues`
 - `GET /api/v1/leagues/:id`
 - `POST /api/v1/leagues/sync`
 
 **Teams:**
+
 - `GET /api/v1/teams`
 - `GET /api/v1/teams/:id`
 - `POST /api/v1/teams/sync/:leagueId`
@@ -30,10 +35,12 @@ List of available endpoints:
 - `DELETE /api/v1/teams/img-url/:id/:imageIndex`
 
 **Players:**
+
 - `GET /api/v1/players`
 - `GET /api/v1/players/team/:id`
 
 **Matches:**
+
 - `GET /api/v1/matches`
 - `GET /api/v1/matches/:id`
 - `GET /api/v1/matches/league/:id`
@@ -42,11 +49,13 @@ List of available endpoints:
 - `PUT /api/v1/matches/preview/:id`
 
 **Favorites:**
+
 - `GET /api/v1/favorites`
 - `POST /api/v1/favorites/:teamId`
 - `DELETE /api/v1/favorites/:id`
 
 **System:**
+
 - `GET /`
 - `GET /health`
 
@@ -59,9 +68,11 @@ List of available endpoints:
 ### 1. POST /api/v1/users/register
 
 Description:
+
 - Register a new user account
 
 Request:
+
 - body:
 
 ```json
@@ -111,9 +122,11 @@ OR
 ### 2. POST /api/v1/users/login
 
 Description:
+
 - Login with email and password
 
 Request:
+
 - body:
 
 ```json
@@ -168,9 +181,11 @@ _Response (401 - Unauthorized)_
 ### 3. POST /api/v1/users/google-login
 
 Description:
+
 - Login using Google OAuth token
 
 Request:
+
 - body:
 
 ```json
@@ -213,6 +228,7 @@ _Response (400 - Bad Request)_
 ### 4. GET /api/v1/leagues
 
 Description:
+
 - Get all leagues from database
 
 _Response (200 - OK)_
@@ -239,9 +255,11 @@ _Response (200 - OK)_
 ### 5. GET /api/v1/leagues/:id
 
 Description:
+
 - Get league by ID
 
 Request:
+
 - params:
 
 ```json
@@ -288,9 +306,11 @@ _Response (404 - Not Found)_
 ### 6. POST /api/v1/leagues/sync
 
 Description:
+
 - Synchronize league data from external API (Admin only)
 
 Request:
+
 - headers:
 
 ```json
@@ -359,9 +379,11 @@ _Response (409 - Conflict)_
 ### 7. GET /api/v1/teams
 
 Description:
+
 - Get all teams with optional filtering, searching, sorting, and pagination
 
 Request:
+
 - query:
 
 ```json
@@ -416,9 +438,11 @@ _Response (200 - OK)_
 ### 8. GET /api/v1/teams/:id
 
 Description:
+
 - Get team by ID with league and players information
 
 Request:
+
 - params:
 
 ```json
@@ -484,9 +508,11 @@ _Response (404 - Not Found)_
 ### 9. POST /api/v1/teams/sync/:leagueId
 
 Description:
+
 - Synchronize teams and players from external API for a specific league (Admin only)
 
 Request:
+
 - headers:
 
 ```json
@@ -538,9 +564,11 @@ _Response (404 - Not Found)_
 ### 10. PATCH /api/v1/teams/generate-descriptions/:id
 
 Description:
+
 - Generate AI-powered description for a team
 
 Request:
+
 - params:
 
 ```json
@@ -582,9 +610,11 @@ _Response (404 - Not Found)_
 ### 11. PATCH /api/v1/teams/img-url/:id
 
 Description:
+
 - Upload team images (max 4 images per team) (Admin only)
 
 Request:
+
 - headers:
 
 ```json
@@ -655,9 +685,11 @@ _Response (404 - Not Found)_
 ### 12. DELETE /api/v1/teams/img-url/:id/:imageIndex
 
 Description:
+
 - Delete a specific team image by index (Admin only)
 
 Request:
+
 - headers:
 
 ```json
@@ -722,6 +754,7 @@ _Response (404 - Not Found)_
 ### 13. GET /api/v1/players
 
 Description:
+
 - Get all players from database
 
 _Response (200 - OK)_
@@ -749,9 +782,11 @@ _Response (200 - OK)_
 ### 14. GET /api/v1/players/team/:id
 
 Description:
+
 - Get all players by team ID
 
 Request:
+
 - params:
 
 ```json
@@ -815,9 +850,11 @@ _Response (404 - Not Found)_
 ### 15. GET /api/v1/matches
 
 Description:
+
 - Get all matches with optional filtering and pagination
 
 Request:
+
 - query:
 
 ```json
@@ -848,6 +885,15 @@ _Response (200 - OK)_
       "predicted_score_away": "integer",
       "match_overview": "string",
       "tactical_analysis": "string",
+          "statistics": [
+      {
+        "type": "string",
+        "home": "string",
+        "away": "string"
+      },
+      ...
+
+    ],
       "HomeTeam": {
         "id": "integer",
         "name": "string",
@@ -879,9 +925,11 @@ _Response (200 - OK)_
 ### 16. GET /api/v1/matches/:id
 
 Description:
-- Get match by ID
+
+- Get match by ID with complete match statistics
 
 Request:
+
 - params:
 
 ```json
@@ -909,6 +957,15 @@ _Response (200 - OK)_
     "predicted_score_away": "integer",
     "match_overview": "string",
     "tactical_analysis": "string",
+    "statistics": [
+      {
+        "type": "string",
+        "home": "string",
+        "away": "string"
+      },
+      ...
+
+    ],
     "HomeTeam": {
       "id": "integer",
       "name": "string",
@@ -952,9 +1009,11 @@ _Response (404 - Not Found)_
 ### 17. GET /api/v1/matches/league/:id
 
 Description:
+
 - Get all matches by league ID with optional filtering and pagination
 
 Request:
+
 - params:
 
 ```json
@@ -1038,9 +1097,12 @@ _Response (404 - Not Found)_
 ### 18. POST /api/v1/matches/sync/:leagueId
 
 Description:
-- Synchronize matches from external API for a specific league (Admin only)
+
+- Synchronize matches with statistics from external API for a specific league (Admin only)
+- Automatically fetches and stores match statistics in JSON format
 
 Request:
+
 - headers:
 
 ```json
@@ -1067,7 +1129,7 @@ _Response (200 - OK)_
     "matchesUpdated": "integer",
     "errors": ["array of error messages"]
   },
-  "message": "Successfully synchronized {count} matches"
+  "message": "Successfully synchronized {count} matches with statistics"
 }
 ```
 
@@ -1092,9 +1154,12 @@ _Response (404 - Not Found)_
 ### 19. PUT /api/v1/matches/analysis/:id
 
 Description:
-- Update match analysis (overview and tactical analysis) using AI
+
+- Update match analysis (overview and tactical analysis) using AI with match statistics integration
+- AI generates analysis based on actual match statistics data
 
 Request:
+
 - params:
 
 ```json
@@ -1107,7 +1172,7 @@ _Response (200 - OK)_
 
 ```json
 {
-  "message": "Successfully updated match analysis"
+  "message": "Successfully updated match analysis with statistics integration"
 }
 OR
 {
@@ -1128,9 +1193,11 @@ _Response (404 - Not Found)_
 ### 20. PUT /api/v1/matches/preview/:id
 
 Description:
+
 - Update match preview and prediction using AI
 
 Request:
+
 - params:
 
 ```json
@@ -1168,9 +1235,11 @@ _Response (404 - Not Found)_
 ### 21. GET /api/v1/favorites
 
 Description:
+
 - Get all favorites for authenticated user
 
 Request:
+
 - headers:
 
 ```json
@@ -1208,9 +1277,11 @@ _Response (200 - OK)_
 ### 22. POST /api/v1/favorites/:teamId
 
 Description:
+
 - Add team to user's favorites
 
 Request:
+
 - headers:
 
 ```json
@@ -1253,9 +1324,11 @@ _Response (400 - Bad Request)_
 ### 23. DELETE /api/v1/favorites/:id
 
 Description:
+
 - Remove team from user's favorites
 
 Request:
+
 - headers:
 
 ```json
@@ -1306,6 +1379,7 @@ _Response (404 - Not Found)_
 ### 24. GET /
 
 Description:
+
 - Root endpoint providing API information
 
 _Response (200 - OK)_
@@ -1332,6 +1406,7 @@ _Response (200 - OK)_
 ### 25. GET /health
 
 Description:
+
 - Health check endpoint
 
 _Response (200 - OK)_
@@ -1396,15 +1471,18 @@ _Response (500 - Internal Server Error)_
 ## Authentication & Authorization
 
 ### Headers Required:
+
 - **Authorization**: `Bearer {access_token}` - Required for protected endpoints
 - **Content-Type**: `application/json` - For JSON requests
 - **Content-Type**: `multipart/form-data` - For file uploads
 
 ### Roles:
+
 - **User**: Default role, access to basic endpoints
 - **Admin**: Access to all endpoints including synchronization and management features
 
 ### Protected Endpoints:
+
 - All `/favorites/*` endpoints require authentication
 - All `/sync/*` endpoints require admin authentication
 - Image upload/delete endpoints require admin authentication
@@ -1417,12 +1495,14 @@ _Response (500 - Internal Server Error)_
 ## External API Integration
 
 The system integrates with external football APIs to synchronize:
+
 - League data
 - Team information
 - Player rosters
 - Match schedules and results
 
 ### Synchronization Features:
+
 - **Deduplication**: Prevents duplicate entries during sync
 - **Bulk Operations**: Efficient batch processing
 - **Error Handling**: Comprehensive error reporting
@@ -1435,12 +1515,14 @@ The system integrates with external football APIs to synchronize:
 ## AI Features
 
 ### Powered by Google Gemini 2.5 Flash Lite:
+
 - **Team Descriptions**: Auto-generate professional team profiles
 - **Match Previews**: AI-powered match analysis and predictions
 - **Tactical Analysis**: Detailed match breakdowns
 - **Score Predictions**: Realistic score forecasting
 
 ### AI Endpoints:
+
 - `PATCH /api/v1/teams/generate-descriptions/:id`
 - `PUT /api/v1/matches/preview/:id`
 - `PUT /api/v1/matches/analysis/:id`
@@ -1452,12 +1534,14 @@ The system integrates with external football APIs to synchronize:
 ## File Upload Features
 
 ### Image Management:
+
 - **Cloudinary Integration**: Secure cloud storage
 - **Multiple Uploads**: Up to 4 images per team
 - **File Validation**: Image files only
 - **Image Deletion**: Remove specific images by index
 
 ### Supported Formats:
+
 - JPEG, PNG, GIF, WebP
 - Maximum 4 images per team
 - Automatic cloud optimization
